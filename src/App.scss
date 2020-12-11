@@ -1,0 +1,31 @@
+section {
+  display: grid;
+  border: 2px solid hotpink;
+  height: 150px;
+  /* center wrapper old school way */
+  width: 10px;
+  margin: 30px auto;
+}
+
+div.card-wrapper {
+  display: inline-grid;
+  border: 1px green solid;
+  gap: 40px;
+  grid-auto-flow: column;
+  transition: transform 400ms ease-out;
+}
+
+div.card-section {
+  color: #fff;
+  background: #2d2d2d;
+  padding: 12px;
+  /*display: inline-block;*/
+  width: 200px;
+  height: inherit;
+}
+
+/* center */
+.center {
+  justify-content: center;
+  align-content: center;
+}

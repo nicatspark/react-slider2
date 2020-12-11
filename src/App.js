@@ -1,23 +1,63 @@
-import logo from './logo.svg';
-import './App.css';
+import { useEffect } from 'react';
+// import motionBlur from './motion-blur-move';
+import './App.scss';
+
+function initiate() {
+  resetCardsPos();
+  addListeners();
+}
+
+function addListeners() {
+  window.addEventListener('click', handleClick);
+}
+
+function handleClick(e) {
+  const cardClick = e.target.closest('.card-section');
+  if (!cardClick) return;
+  console.dir(cardClick);
+  slideCards(cardClick && cardClick.offsetLeft);
+}
+
+function slideCards(offsetLeft) {
+  const { cardsWrapper } = viewModel();
+  cardsWrapper.style.transform = `translateX(${
+    (offsetLeft + cardCenterOffset) * -1
+  }px)`;
+}
+
+let cardCenterOffset;
+function resetCardsPos() {
+  const { cardsCollection } = viewModel();
+  const cardStyles = window.getComputedStyle(cardsCollection[0]);
+  cardCenterOffset = Math.round(parseInt(cardStyles.width) / 2);
+  slideCards(0);
+  // cardsWrapper.style.transform = `translateX(${cardCenterOffset * -1}px)`;
+}
+
+function viewModel() {
+  const cardsCollection = document.querySelectorAll('.card-section');
+  const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
+  return {
+    cardsCollection,
+    cardsWrapper,
+  };
+}
+// window.onload = initiate;
 
 function App() {
+  useEffect(() => {
+    initiate();
+  }, []);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <section className="card-container">
+        <div className="card-wrapper">
+          <div className="card-section center">1</div>
+          <div className="card-section center">2</div>
+          <div className="card-section center">3</div>
+        </div>
+      </section>
     </div>
   );
 }

@@ -1,0 +1,7 @@
+<svg width="1" height="1">
+  <defs>
+    <filter id="svg-motion-blur">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="0 0" />
+    </filter>
+  </defs>
+</svg>
