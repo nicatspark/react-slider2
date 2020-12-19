@@ -2,6 +2,7 @@ async function motionBlur(
   element,
   {
     durationMs = 1000,
+    properties = [],
     xTargetDistancePx = 0,
     yTargetDistancePx = 0,
     xTarget, // Optional absolute alternative.
@@ -32,27 +33,163 @@ async function motionBlur(
       start || (start = timestamp);
       const elapsedMs = timestamp - start;
       const linearProgress = elapsedMs / durationMs;
-      const easedProgress = {
-        x: easings[easing](linearProgress) * xTargetDistancePx,
-        y: easings[easing](linearProgress) * yTargetDistancePx,
-      };
-      //
-      if (useMotionBlur) applyMotionBlur(easedProgress);
-      //
-      element.style.left = originPos.x + easedProgress.x + 'px';
-      element.style.top = originPos.y + easedProgress.y + 'px';
+      const isSimpleValueUnit = (cssVal_arr) =>
+        cssVal_arr
+          .map((cssVal) => cssVal && !isNaN(parseInt(cssVal)))
+          .some(Boolean);
+      // forEach of the multiple properties being sent in.
+      const allPropertyTasks = [];
+      //prettier-disable-next-line
+      const regexFloatNr = new RegExp('([-]*[0-9\\.]+)', 'g');
+      properties.forEach((prop) => {
+        const oneAnimateProperty = {
+          property: prop.property,
+          orig_start: prop.start,
+          orig_end: prop.end,
+          start_nr_arr: prop.start.match(regexFloatNr).map((x) => +x),
+          start_nr_wrap: prop.start.replace(regexFloatNr, '|').split('|'),
+          end_nr_arr: prop.end.match(regexFloatNr).map((x) => +x),
+          end_nr_wrap: prop.end.replace(regexFloatNr, '|').split('|'),
+          easedDistance_arr: [],
+          easedPropVal: '',
+          unit: filterOutUnitFromCssKeyValueArr([prop.start, prop.end]),
+        };
+        // Are there multiple values in one propvalue, as in 'translate(12px,34px)'?
+        if (
+          !isSimpleValueUnit([
+            oneAnimateProperty.orig_start,
+            oneAnimateProperty.orig_end,
+          ])
+        ) {
+          // For each nr in a prop value, as in translate(12px,24px)
+          oneAnimateProperty.start_nr_arr.forEach((nr, i) => {
+            const targetDistance = oneAnimateProperty.end_nr_arr[i] - nr;
+            const easeDist = easings[easing](linearProgress) * targetDistance;
+            oneAnimateProperty.easedDistance_arr.push(easeDist);
+          });
+          // Build it back together with easing added.
+          oneAnimateProperty.start_nr_wrap.forEach((wrap, i) => {
+            const easeDist = oneAnimateProperty.easedDistance_arr[i];
+            const startPos = oneAnimateProperty.start_nr_arr[i];
+            const unit = oneAnimateProperty.unit;
+            const newPropVal =
+              removeOldUnit(wrap) +
+              (isNaN(easeDist) ? '' : startPos + easeDist + unit);
+            oneAnimateProperty.easedPropVal += newPropVal;
+          });
+        } else {
+          // It is a simple propvalue like: 12px.
+          const targetDistance = parseInt(prop.end) - parseInt(prop.start);
+          const easeDist = easings[easing](linearProgress) * targetDistance;
+          console.log('easeDist', easeDist);
+          oneAnimateProperty.easedDistance_arr.push(easeDist);
+          const unit = oneAnimateProperty.unit;
+          const startPos = oneAnimateProperty.start_nr_arr[0];
+          oneAnimateProperty.easedPropVal = startPos + easeDist + unit;
+        }
+        allPropertyTasks.push(oneAnimateProperty);
+      });
+      // If motion blur is applied it will be based on max values on each axis velocity.
+      const motionBlurValidDistances = { x: [], y: [] };
+      allPropertyTasks.forEach((propobj) => {
+        element.style[propobj.property] = propobj.easedPropVal;
+        if (isValidForMotionBlur(propobj)) {
+          // Set to do motion blur.
+          if (
+            ['left', 'right'].includes(propobj.property.toLowerCase()) ||
+            catchTranslateX(propobj)
+          )
+            motionBlurValidDistances.x.push(propobj.easedDistance_arr[0]);
+          else motionBlurValidDistances.y.push(propobj.easedDistance_arr[0]);
+        }
+      });
+      // Apply motion blur if applicable.
+      if (
+        useMotionBlur &&
+        (motionBlurValidDistances.x.length || motionBlurValidDistances.y.length)
+      ) {
+        applyMotionBlur({
+          x: motionBlurValidDistances.x.length
+            ? Math.max([...motionBlurValidDistances.x])
+            : 0,
+          y: motionBlurValidDistances.y
+            ? Math.max([...motionBlurValidDistances.y])
+            : 0,
+        });
+      }
+
+      // Helper functions. Typically from em),rem),px),etc.
+      function removeOldUnit(wrap) {
+        const regex = new RegExp('^[a-zA-Z]{2,3}(?=[\\),])');
+        return wrap.replace(regex, '');
+      }
+
+      function filterOutUnitFromCssKeyValueArr(arr) {
+        // Simple css values as '12px'.
+        const hasSimpleValue = arr.some((kv) => !isNaN(parseInt(kv)));
+        const assert = (uniqueUnits) => {
+          console.assert(
+            uniqueUnits.length === 1,
+            `Seems more than one unit is used (${uniqueUnits.join()}) in start and end. That won't work.`
+          );
+        };
+        if (hasSimpleValue) {
+          const unitArr = arr.reduce((acc, valueUnit) => {
+            console.log('regexFloatNr', regexFloatNr);
+            const unit = valueUnit.replace(regexFloatNr, '');
+            unit ? acc.push(unit) : void 0;
+            return acc;
+          }, []);
+          const uniqueUnits = [...new Set(unitArr)];
+          assert(uniqueUnits);
+          return uniqueUnits[0];
+        }
+        // Complex css values as 'translate(12px,24px)'.
+        let finalUnit;
+        arr.forEach((kv) => {
+          if (!kv) return;
+          // eslint-disable-next-line
+          const parentesisContentArr = kv.match(/\(([^\)]*)\)/)[1].split(','); // ['12px','34px']
+          const arrayOfUnitsOnly = parentesisContentArr.map((nu) =>
+            nu.replace(regexFloatNr, '')
+          );
+          const removedFalseys = arrayOfUnitsOnly.filter(Boolean);
+          const uniqueUnits = [...new Set(removedFalseys)];
+          assert(uniqueUnits);
+          finalUnit = uniqueUnits[0];
+        });
+        return finalUnit;
+      }
+
+      function catchTranslateX(propobj) {
+        return /(^(translatex))/.test(propobj.start_nr_wrap[0].toLowerCase());
+      }
+
+      function isValidForMotionBlur(propobj) {
+        // Motion across the screen.
+        return (
+          ['left', 'right', 'top', 'bottom'].includes(
+            propobj.property.toLowerCase()
+          ) ||
+          (['transform'].includes(propobj.property.toLowerCase()) &&
+            ['translatex', 'translatey'].filter(
+              (x) => propobj.start_nr_wrap[0].toLowerCase().indexOf(x) >= 0
+            ).length)
+        );
+      }
 
       if (elapsedMs < durationMs) {
         window.requestAnimationFrame(step); // Keep going.
       } else {
         // Movement done.
         if (useMotionBlur) resetMotionBlur();
-        element.style.left = Math.round(parseInt(element.style.left)) + 'px';
-        element.style.top = Math.round(parseInt(element.style.top)) + 'px';
+        allPropertyTasks.forEach((propToAnimate) => {
+          element.style[propToAnimate.property] = propToAnimate.orig_end;
+        });
         resolve({ element });
       }
     }
-    window.requestAnimationFrame(step); // Kicking off.
+    window.requestAnimationFrame(step); // Kicking things off.
 
     function convertOptionalAbsoluteToRelative() {
       const absolutePositionsNotPresent =
@@ -74,7 +211,7 @@ async function motionBlur(
     }
 
     function initMotionBlur() {
-      // create svg imperatively.
+      // Function that creates the blur motion svg.
       if (false) {
         // Skip until I figure out how to make it stick.
         const svgEl = document.createElement('svg');
@@ -90,6 +227,7 @@ async function motionBlur(
         feGaussianBlurEl.setAttribute('stdDeviation', '0 0');
         docRoot.body.appendChild(svgEl);
       }
+      // Connect target element w motion blur svg.
       element.style.filter = 'url("#svg-motion-blur")';
       return;
     }
