@@ -1,17 +1,46 @@
+:root {
+}
+
+.App {
+  height: 100vh;
+}
+
+.pancake-grid {
+  display: grid;
+  grid-template-rows: var(--header-height) 1fr;
+  height: 100%;
+  header {
+    background-color: black;
+    color: #666;
+    padding: 30px;
+    display: grid;
+    place-items: center;
+    h1 {
+      margin: 0;
+    }
+  }
+  article {
+    --header-height: 100px;
+    --card-gap: 10px;
+    overflow: hidden;
+    height: calc(100vh - var(--header-height));
+    padding: 15px 0;
+  }
+}
+
 section {
   display: grid;
   border: 2px solid hotpink;
-  height: 150px;
   /* center wrapper old school way */
-  width: 10px;
-  margin: 30px auto;
+  width: 5px;
+  margin: 0 auto;
 }
 
 div.card-wrapper {
   position: relative;
   display: inline-grid;
   border: 1px green solid;
-  gap: 40px;
+  gap: var(--card-gap);
   grid-auto-flow: column;
   // transition: transform 400ms ease-out;
 }
@@ -23,6 +52,27 @@ div.card-section {
   /*display: inline-block;*/
   width: 200px;
   height: inherit;
+  display: grid;
+  grid-template-rows: 3fr auto 1fr;
+  gap: 0.5rem;
+  place-items: center;
+  & > div {
+    background: red;
+    height: 100%;
+    &:first-child {
+      position: relative;
+    }
+  }
+  & img {
+    height: 100%;
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .paragraph {
+    text-overflow: ellipsis;
+  }
 }
 
 /* center */

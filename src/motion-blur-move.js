@@ -15,6 +15,9 @@ async function motionBlur(
   } = {}
 ) {
   return new Promise((resolve) => {
+    const noMovement = !!properties.filter((prop) => prop.start === prop.end)
+      .length;
+    if (noMovement) resolve({ element });
     let start;
     const easings = easingFactory();
     const elStartPosition = window.getComputedStyle(element);
@@ -120,6 +123,7 @@ async function motionBlur(
 
       // Helper functions. Typically from em),rem),px),etc.
       function removeOldUnit(wrap) {
+        // Unit followed by end parentesis or comma.
         const regex = new RegExp('^[a-zA-Z]{2,3}(?=[\\),])');
         return wrap.replace(regex, '');
       }
@@ -294,7 +298,7 @@ async function motionBlur(
         return c3 * x * x * x - c1 * x * x;
       };
       const easeOutBack = (x) => {
-        const c1 = 1.70158;
+        const c1 = 1.00158; // Originally 1.70158
         const c3 = c1 + 1;
         return 1 + c3 * Math.pow(x - 1, 3) + c1 * Math.pow(x - 1, 2);
       };

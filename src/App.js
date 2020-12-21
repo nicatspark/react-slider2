@@ -2,9 +2,34 @@ import { useEffect, useState } from 'react';
 import motionBlur from './motion-blur-move';
 import './App.scss';
 
-function initiate() {
-  resetCardsPos();
-  addListeners();
+async function initiate() {
+  await adjustCardSpacing();
+  return new Promise((resolve) => {
+    resetCardsPos();
+    addListeners();
+    resolve();
+  });
+}
+
+function adjustCardSpacing() {
+  return new Promise((resolve) => {
+    const { firstImage } = viewModel();
+    firstImage.addEventListener('load', (e) => {
+      console.log('e', e);
+      const imgWidth = e.target.getBoundingClientRect().width;
+      // const gapBetween = 10;
+      const article = document.querySelector('article');
+      article.style.setProperty(
+        '--card-gap',
+        `${window.innerWidth / 2 - imgWidth / 2}px`
+      );
+      console.log('cardgap', article.style.getPropertyValue('--card-gap'));
+      // debugger;
+      // const root = window.getComputedStyle(document.querySelector(':root'));
+      // root.setProperty('--card-gap', imgWidth / 2 + gawBetween);
+      resolve();
+    });
+  });
 }
 
 function addListeners() {
@@ -48,9 +73,9 @@ function slideCards(selectedCard, index) {
       },
     ],
     applyToggle: false,
-    easing: 'easeOutBack',
+    easing: 'easeOutQuad',
     useMotionBlur: true,
-    blurMultiplier: 0.5,
+    blurMultiplier: 1,
   }).then(({ element }) => console.log('done', element));
 
   // cardsWrapper.style.transform = `translateX(${
@@ -65,20 +90,19 @@ function resetCardsPos() {
   const cardStyles = cardsCollection[0].getBoundingClientRect();
   cardCenterOffset = Math.round(cardStyles.width / 2);
   distBtwnCards = cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
-  debugger;
-  // slideCards(0);
   cardsWrapper.style.left = `${cardCenterOffset * -1}px`;
 }
 
 function viewModel() {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
+  const firstImage = cardsCollection[0].querySelector('img');
   return {
     cardsCollection,
     cardsWrapper,
+    firstImage,
   };
 }
-// window.onload = initiate;
 
 function App() {
   const [options] = useState([
@@ -90,20 +114,38 @@ function App() {
   ]);
 
   useEffect(() => {
-    initiate();
+    const init = async () => {
+      await initiate();
+      console.log('React inited');
+    };
+    init();
   }, []);
 
   return (
     <div className="App">
-      <section className="card-container">
-        <div className="card-wrapper">
-          {options.map((o, i) => (
-            <div key={i} className="card-section center" data-index={i}>
-              1 {o}
+      <div className="pancake-grid">
+        <header>
+          <h1>Configurator</h1>
+        </header>
+        <article>
+          <section className="card-container">
+            <div className="card-wrapper">
+              {options.map((o, i) => (
+                <div key={i} className="card-section center" data-index={i}>
+                  <div className="image">
+                    <img src="https://via.placeholder.com/500" alt="" />
+                  </div>
+                  <div className="header">{o}</div>
+                  <div className="paragraph">
+                    Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                    Accusantium quidem nostrum veritatis odio, maiores quasi?
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </section>
+          </section>
+        </article>
+      </div>
     </div>
   );
 }
