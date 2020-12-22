@@ -145,22 +145,27 @@ function viewModel() {
   };
 }
 
+function fetchApi() {
+  return new Promise((resolve) => {
+    const cardsObj = ['header1', 'header2', 'header3', 'header4', 'header5'];
+    setTimeout(() => {
+      resolve(cardsObj);
+    }, 2000);
+  });
+}
+
 function App() {
-  const [options] = useState([
-    'header1',
-    'header2',
-    'header3',
-    'header4',
-    'header5',
-  ]);
+  const [options, setOptions] = useState([]);
 
   useEffect(() => {
     const init = async () => {
+      const cardsObj = await fetchApi();
+      setOptions(cardsObj);
       await initiate();
       console.log('React inited');
     };
     init();
-  }, []);
+  }, [setOptions]);
 
   return (
     <div className="App">
