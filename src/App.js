@@ -12,21 +12,28 @@ async function initiate() {
 }
 
 function adjustCardSpacing() {
+  const { cardsWrapper, stateUpdate } = viewModel();
   return new Promise((resolve) => {
     const { firstImage } = viewModel();
     firstImage.addEventListener('load', _distributeCards);
 
     function _distributeCards(e) {
-      const imgWidth = e.target.getBoundingClientRect().width;
+      const IMG_WIDTH = e.target.getBoundingClientRect().width;
+      // const IMG_WIDTH = global.IMG_WIDTH; // e.target.getBoundingClientRect().width;
       const sliderWrapper = document.querySelector('article');
-      const cardWidth = parseInt(
+      console.log('same', cardsWrapper, sliderWrapper);
+      const CARD_WIDTH = parseInt(
         window.getComputedStyle(sliderWrapper).getPropertyValue('--card-width')
       );
-      const imageOverflow = (imgWidth - cardWidth) / 2;
-      console.log('imageOverflow', imageOverflow);
-      const cardSpacing = false
-        ? window.innerWidth / 2 - imgWidth / 2
-        : imgWidth / 2 + 20 + imageOverflow;
+      stateUpdate({ IMG_WIDTH, CARD_WIDTH });
+      const imageOverflow = (IMG_WIDTH - CARD_WIDTH) / 2;
+      console.log(
+        'imageOverflow',
+        `${IMG_WIDTH} - ${CARD_WIDTH} = ${imageOverflow}`
+      );
+      const cardSpacing = true
+        ? window.innerWidth / 2 - IMG_WIDTH / 2
+        : IMG_WIDTH / 2 + 20 + imageOverflow;
       sliderWrapper.style.setProperty('--card-gap', `${cardSpacing}px`);
       // debugger;
       // const root = window.getComputedStyle(document.querySelector(':root'));
@@ -51,7 +58,7 @@ function handleClick(e) {
 }
 
 function slideCards(selectedCard, index) {
-  const { cardsWrapper } = viewModel();
+  const { cardsWrapper, cardsCollection } = viewModel();
   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
   // const cardsWrapperBoundaries = cardsWrapper.getBoundingClientRect();
   // eslint-disable-next-line
@@ -80,30 +87,39 @@ function slideCards(selectedCard, index) {
     easing: 'easeOutBack',
     useMotionBlur: true,
     blurMultiplier: 0.2,
-  }).then(({ element }) => console.log('done', element));
-
-  // cardsWrapper.style.transform = `translateX(${
-  //   (offsetLeft + global.CARD_CENTER_OFFSET) * -1
-  // }px)`;
+  }).then(({ element }) => {
+    console.log('done', element, selectedCard);
+    [...cardsCollection].forEach((card) => {
+      card.classList.remove('selected');
+    });
+    cardsCollection[index].classList.add('selected');
+  });
 }
 
-let global = {
+// cardsWrapper.style.transform = `translateX(${
+//   (offsetLeft + global.CARD_CENTER_OFFSET) * -1
+// }px)`;
+
+let global = Object.freeze({
   CARD_CENTER_OFFSET: 0,
-  DIST_BTWN_CARDS: 200,
-};
-Object.freeze(global);
+  DIST_BTWN_CARDS: 400,
+  CARD_WIDTH: 300,
+  IMG_WIDTH: 300,
+});
 
 function resetCardsPos() {
   const { cardsCollection, cardsWrapper, stateUpdate } = viewModel();
+  const { CARD_WIDTH } = global;
   const cardStyles = cardsCollection[0].getBoundingClientRect();
-  const CARD_CENTER_OFFSET = Math.round(cardStyles.width / 2);
+  const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH / 2);
   const DIST_BTWN_CARDS =
     cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
-  cardsWrapper.style.left = `${global.CARD_CENTER_OFFSET * -1}px`;
+  cardsWrapper.style.left = `${CARD_CENTER_OFFSET * -1}px`;
   stateUpdate({
     DIST_BTWN_CARDS,
     CARD_CENTER_OFFSET,
   });
+  console.log('global', global);
 }
 
 function viewModel() {
