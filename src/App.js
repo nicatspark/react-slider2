@@ -12,29 +12,23 @@ async function initiate() {
 }
 
 function adjustCardSpacing() {
-  const { cardsWrapper, stateUpdate } = viewModel();
+  const { stateUpdate } = viewModel();
   return new Promise((resolve) => {
     const { firstImage } = viewModel();
     firstImage.addEventListener('load', _distributeCards);
 
     function _distributeCards(e) {
       const IMG_WIDTH = e.target.getBoundingClientRect().width;
-      // const IMG_WIDTH = global.IMG_WIDTH; // e.target.getBoundingClientRect().width;
       const sliderWrapper = document.querySelector('article');
-      console.log('same', cardsWrapper, sliderWrapper);
-      const CARD_WIDTH = parseInt(
-        window.getComputedStyle(sliderWrapper).getPropertyValue('--card-width')
-      );
-      stateUpdate({ IMG_WIDTH, CARD_WIDTH });
+      const root = window.getComputedStyle(sliderWrapper);
+      const CARD_WIDTH = parseInt(root.getPropertyValue('--card-width'));
+      const CARD_GAP = parseInt(root.getPropertyValue('--card-gap'));
+      stateUpdate({ IMG_WIDTH, CARD_WIDTH, CARD_GAP });
       const imageOverflow = (IMG_WIDTH - CARD_WIDTH) / 2;
-      console.log(
-        'imageOverflow',
-        `${IMG_WIDTH} - ${CARD_WIDTH} = ${imageOverflow}`
-      );
-      const cardSpacing = true
-        ? window.innerWidth / 2 - IMG_WIDTH / 2
-        : IMG_WIDTH / 2 + 20 + imageOverflow;
-      sliderWrapper.style.setProperty('--card-gap', `${cardSpacing}px`);
+      const cardGridGap = false
+        ? window.innerWidth / 2 - IMG_WIDTH / 2 - CARD_WIDTH / 2
+        : CARD_GAP + imageOverflow * 2;
+      sliderWrapper.style.setProperty('--card-gap', `${cardGridGap}px`);
       // debugger;
       // const root = window.getComputedStyle(document.querySelector(':root'));
       // root.setProperty('--card-gap', imgWidth / 2 + gawBetween);
@@ -147,19 +141,73 @@ function viewModel() {
 
 function fetchApi() {
   return new Promise((resolve) => {
-    const cardsObj = ['header1', 'header2', 'header3', 'header4', 'header5'];
+    const cardsObj = [
+      {
+        header: 'header1',
+        imageUrl: 'https://via.placeholder.com/500',
+      },
+      {
+        header: 'header2',
+        imageUrl: 'https://via.placeholder.com/500',
+      },
+      {
+        header: 'header3',
+        imageUrl: 'https://via.placeholder.com/500',
+      },
+      {
+        header: 'header4',
+        imageUrl: 'https://via.placeholder.com/500',
+      },
+      {
+        header: 'header5',
+        imageUrl: 'https://via.placeholder.com/500',
+      },
+    ];
     setTimeout(() => {
       resolve(cardsObj);
     }, 2000);
   });
 }
 
+async function preloadImages(cards) {
+  // load 1st image first, then the rest in parallel.
+  console.assert(
+    cards.map((c) => !!c.imageUrl).every(Boolean),
+    'One or more card options lack imgurl.'
+  );
+  await addImageProcess(cards[0].imageUrl);
+  return new Promise((resolve) => {
+    const loadArr = [...cards]
+      .splice(1)
+      .map((card) => addImageProcess(card.imageUrl));
+    Promise.all(loadArr)
+      .then((values) => {
+        console.log('slider', 'Images loaded', values);
+        resolve();
+      })
+      .catch((err) => console.error(err));
+    resolve();
+  });
+
+  function addImageProcess(src) {
+    return new Promise((resolve, reject) => {
+      let img = new Image();
+      img.onload = () => resolve(true);
+      img.onerror = reject;
+      img.src = src;
+    });
+  }
+}
+
 function App() {
   const [options, setOptions] = useState([]);
+  const [preloading, setPreloading] = useState(true);
 
   useEffect(() => {
     const init = async () => {
       const cardsObj = await fetchApi();
+      await preloadImages(cardsObj);
+      setPreloading(false);
       setOptions(cardsObj);
       await initiate();
       console.log('React inited');
@@ -174,22 +222,34 @@ function App() {
           <h1>Configurator</h1>
         </header>
         <article>
-          <section className="card-container">
+          <section
+            className={`card-container${preloading ? ' ispreloading' : ''}`}
+          >
             <div className="card-wrapper">
-              {options.map((o, i) => (
-                <div key={i} className="card-section center" data-index={i}>
-                  <div className="image">
-                    <img src="https://via.placeholder.com/500" alt="" />
+              {!preloading ? (
+                options.map((o, i) => (
+                  <div key={i} className="card-section center" data-index={i}>
+                    <div className="image">
+                      <img src="https://via.placeholder.com/500" alt="" />
+                    </div>
+                    <div className="header">
+                      <h4>{o.header}</h4>
+                    </div>
+                    <div className="paragraph">
+                      Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                      Accusantium quidem nostrum veritatis odio, maiores quasi?
+                    </div>
                   </div>
-                  <div className="header">
-                    <h4>{o}</h4>
+                ))
+              ) : (
+                <div className="card-section center preloader-card">
+                  <div className="image animated-background"></div>
+                  <div className="header animated-background">
+                    <h4>&nbsp;</h4>
                   </div>
-                  <div className="paragraph">
-                    Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                    Accusantium quidem nostrum veritatis odio, maiores quasi?
-                  </div>
+                  <div className="paragraph animated-background">&nbsp;</div>
                 </div>
-              ))}
+              )}
             </div>
           </section>
         </article>
