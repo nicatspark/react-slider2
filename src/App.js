@@ -14,21 +14,25 @@ async function initiate() {
 function adjustCardSpacing() {
   return new Promise((resolve) => {
     const { firstImage } = viewModel();
-    firstImage.addEventListener('load', (e) => {
-      console.log('e', e);
+    firstImage.addEventListener('load', _distributeCards);
+
+    function _distributeCards(e) {
       const imgWidth = e.target.getBoundingClientRect().width;
-      // const gapBetween = 10;
-      const article = document.querySelector('article');
-      article.style.setProperty(
-        '--card-gap',
-        `${window.innerWidth / 2 - imgWidth / 2}px`
+      const sliderWrapper = document.querySelector('article');
+      const cardWidth = parseInt(
+        window.getComputedStyle(sliderWrapper).getPropertyValue('--card-width')
       );
-      console.log('cardgap', article.style.getPropertyValue('--card-gap'));
+      const imageOverflow = (imgWidth - cardWidth) / 2;
+      console.log('imageOverflow', imageOverflow);
+      const cardSpacing = false
+        ? window.innerWidth / 2 - imgWidth / 2
+        : imgWidth / 2 + 20 + imageOverflow;
+      sliderWrapper.style.setProperty('--card-gap', `${cardSpacing}px`);
       // debugger;
       // const root = window.getComputedStyle(document.querySelector(':root'));
       // root.setProperty('--card-gap', imgWidth / 2 + gawBetween);
       resolve();
-    });
+    }
   });
 }
 
@@ -42,7 +46,7 @@ function handleClick(e) {
   if (!selectedCard) return;
   const { index } = selectedCard.dataset;
   console.log(selectedCard, e);
-  // cardsWrapper.style.left = cardCenterOffset * -1 + 'px';
+  // cardsWrapper.style.left = global.CARD_CENTER_OFFSET * -1 + 'px';
   slideCards(selectedCard, index);
 }
 
@@ -60,7 +64,7 @@ function slideCards(selectedCard, index) {
             .split(',')[4]
         )
       : 0;
-  const endValue = distBtwnCards * index * -1;
+  const endValue = global.DIST_BTWN_CARDS * index * -1;
   console.log(startValue, endValue);
 
   motionBlur(cardsWrapper, {
@@ -73,34 +77,55 @@ function slideCards(selectedCard, index) {
       },
     ],
     applyToggle: false,
-    easing: 'easeOutQuad',
+    easing: 'easeOutBack',
     useMotionBlur: true,
-    blurMultiplier: 1,
+    blurMultiplier: 0.2,
   }).then(({ element }) => console.log('done', element));
 
   // cardsWrapper.style.transform = `translateX(${
-  //   (offsetLeft + cardCenterOffset) * -1
+  //   (offsetLeft + global.CARD_CENTER_OFFSET) * -1
   // }px)`;
 }
 
-let cardCenterOffset;
-let distBtwnCards;
+let global = {
+  CARD_CENTER_OFFSET: 0,
+  DIST_BTWN_CARDS: 200,
+};
+Object.freeze(global);
+
 function resetCardsPos() {
-  const { cardsCollection, cardsWrapper } = viewModel();
+  const { cardsCollection, cardsWrapper, stateUpdate } = viewModel();
   const cardStyles = cardsCollection[0].getBoundingClientRect();
-  cardCenterOffset = Math.round(cardStyles.width / 2);
-  distBtwnCards = cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
-  cardsWrapper.style.left = `${cardCenterOffset * -1}px`;
+  const CARD_CENTER_OFFSET = Math.round(cardStyles.width / 2);
+  const DIST_BTWN_CARDS =
+    cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
+  cardsWrapper.style.left = `${global.CARD_CENTER_OFFSET * -1}px`;
+  stateUpdate({
+    DIST_BTWN_CARDS,
+    CARD_CENTER_OFFSET,
+  });
 }
 
 function viewModel() {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
+  // Mini state.
+  const _stateKeyExist = (keyValueObj) =>
+    Object.keys(keyValueObj)
+      .map((key) => !!global[key])
+      .some(Boolean);
+  const stateUpdate = (keyValueObj) => (global = { ...global, ...keyValueObj });
+  const stateAdd = (keyValueObj) =>
+    !_stateKeyExist(keyValueObj)
+      ? stateUpdate(keyValueObj)
+      : console.error(`One or more keys already existed in state.`);
   return {
     cardsCollection,
     cardsWrapper,
     firstImage,
+    stateUpdate,
+    stateAdd,
   };
 }
 
@@ -135,7 +160,9 @@ function App() {
                   <div className="image">
                     <img src="https://via.placeholder.com/500" alt="" />
                   </div>
-                  <div className="header">{o}</div>
+                  <div className="header">
+                    <h4>{o}</h4>
+                  </div>
                   <div className="paragraph">
                     Lorem ipsum dolor sit amet consectetur adipisicing elit.
                     Accusantium quidem nostrum veritatis odio, maiores quasi?
