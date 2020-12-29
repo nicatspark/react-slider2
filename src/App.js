@@ -1,11 +1,8 @@
 import { useEffect, useState, useRef } from 'react';
 import motionBlur from './motion-blur-move';
-import miniStore from './miniStore';
 import './App.scss';
 
 async function initiate() {
-  miniStore.INIT = { test: 'test' };
-  console.log('miniStore.STATE', miniStore.STATE);
   await adjustCardSpacing();
   return new Promise((resolve) => {
     resetCardsPos();
@@ -25,16 +22,18 @@ function adjustCardSpacing() {
       const sliderWrapper = document.querySelector('article');
       const root = window.getComputedStyle(sliderWrapper);
       const CARD_WIDTH = parseInt(root.getPropertyValue('--card-width'));
-      const CARD_GAP = parseInt(root.getPropertyValue('--card-gap'));
-      stateUpdate({ IMG_WIDTH, CARD_WIDTH, CARD_GAP });
+      const DIST_BTWN_CARDS = parseInt(
+        root.getPropertyValue('--dist-btwn-cards')
+      );
+      stateUpdate({ IMG_WIDTH, CARD_WIDTH, DIST_BTWN_CARDS });
       const imageOverflow = (IMG_WIDTH - CARD_WIDTH) / 2;
       const cardGridGap = false
         ? window.innerWidth / 2 - IMG_WIDTH / 2 - CARD_WIDTH / 2
-        : CARD_GAP + imageOverflow * 2;
-      sliderWrapper.style.setProperty('--card-gap', `${cardGridGap}px`);
+        : DIST_BTWN_CARDS + imageOverflow * 2;
+      sliderWrapper.style.setProperty('--dist-btwn-cards', `${cardGridGap}px`);
       // debugger;
       // const root = window.getComputedStyle(document.querySelector(':root'));
-      // root.setProperty('--card-gap', imgWidth / 2 + gawBetween);
+      // root.setProperty('--dist-btwn-cards', imgWidth / 2 + gawBetween);
       resolve();
     }
   });
@@ -68,7 +67,7 @@ function slideCards(selectedCard, index) {
             .split(',')[4]
         )
       : 0;
-  const endValue = global.DIST_BTWN_CARDS * index * -1;
+  const endValue = global.DIST_BTWN_CARDS.current * index * -1;
   console.log(startValue, endValue);
 
   motionBlur(cardsWrapper, {
@@ -98,17 +97,17 @@ function slideCards(selectedCard, index) {
 // }px)`;
 
 let global = Object.freeze({
-  CARD_CENTER_OFFSET: 0,
-  DIST_BTWN_CARDS: 400,
-  CARD_WIDTH: 300,
-  IMG_WIDTH: 300,
+  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
+  DIST_BTWN_CARDS: { current: 400, unit: 'px', css: true },
+  CARD_WIDTH: { current: 300, unit: 'px', css: true },
+  IMG_WIDTH: { current: 300, unit: 'px', css: true },
 });
 
 function resetCardsPos() {
   const { cardsCollection, cardsWrapper, stateUpdate } = viewModel();
   const { CARD_WIDTH } = global;
   const cardStyles = cardsCollection[0].getBoundingClientRect();
-  const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH / 2);
+  const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH.current / 2);
   const DIST_BTWN_CARDS =
     cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
   cardsWrapper.style.left = `${CARD_CENTER_OFFSET * -1}px`;
@@ -116,29 +115,50 @@ function resetCardsPos() {
     DIST_BTWN_CARDS,
     CARD_CENTER_OFFSET,
   });
-  console.log('global', global);
+  console.table(global);
 }
 
 function viewModel() {
+  const _cssCustomPropRoot = document.documentElement;
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
-  // Mini state.
+  // Mini state helper functions.
   const _stateKeyExist = (keyValueObj) =>
     Object.keys(keyValueObj)
       .map((key) => !!global[key])
       .some(Boolean);
-  const stateUpdate = (keyValueObj) => (global = { ...global, ...keyValueObj });
+  const stateUpdate = (keyValueObj) => {
+    Object.keys(keyValueObj).forEach((key) => {
+      // val can be simple number, partial object or full object.
+      // full object => {current: 12, unit: 'px', css: true}
+      const isObj = (val) => typeof val === 'object';
+      const val = isObj(keyValueObj[key])
+        ? { ...global[key], ...keyValueObj[key] }
+        : { ...global[key], current: keyValueObj[key] };
+      pushToCssCustProp({ key, val });
+      global = { ...global, ...val };
+    });
+  };
   const stateAdd = (keyValueObj) =>
     !_stateKeyExist(keyValueObj)
       ? stateUpdate(keyValueObj)
       : console.error(`One or more keys already existed in state.`);
+  const pushToCssCustProp = ({ key, val }) => {
+    if (!val.css) return;
+    debugger;
+    viewModel()._cssCustomPropRoot.style.setProperty(
+      `--${key.replace('_', '-')}`,
+      val.current
+    );
+  };
   return {
     cardsCollection,
     cardsWrapper,
     firstImage,
     stateUpdate,
     stateAdd,
+    _cssCustomPropRoot,
   };
 }
 

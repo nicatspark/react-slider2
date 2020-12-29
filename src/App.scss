@@ -1,5 +1,7 @@
 :root {
-  --test: 'test';
+  --header-height: 100px;
+  --dist-btwn-cards: 100px;
+  --card-width: 300px;
 }
 
 .App {
@@ -21,9 +23,6 @@
     }
   }
   article {
-    --header-height: 100px;
-    --card-gap: 100px;
-    --card-width: 300px;
     overflow: hidden;
     height: calc(100vh - var(--header-height));
     padding: 15px 0;
@@ -44,7 +43,7 @@ div.card-wrapper {
   position: relative;
   display: inline-grid;
   border: 1px green solid;
-  gap: var(--card-gap);
+  gap: var(--dist-btwn-cards);
   grid-auto-flow: column;
   will-change: transform;
   transform-origin: center;
