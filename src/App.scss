@@ -1,6 +1,6 @@
 :root {
   --header-height: 100px;
-  --dist-btwn-cards: 100px;
+  --card-gap: 100px;
   --card-width: 300px;
 }
 
@@ -43,7 +43,7 @@ div.card-wrapper {
   position: relative;
   display: inline-grid;
   border: 1px green solid;
-  gap: var(--dist-btwn-cards);
+  gap: var(--card-gap);
   grid-auto-flow: column;
   will-change: transform;
   transform-origin: center;

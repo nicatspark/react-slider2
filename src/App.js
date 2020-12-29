@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import motionBlur from './motion-blur-move';
+import microState from './microState';
 import './App.scss';
 
 async function initiate() {
@@ -12,25 +13,23 @@ async function initiate() {
 }
 
 function adjustCardSpacing() {
-  const { stateUpdate } = viewModel();
+  const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
-    const { firstImage } = viewModel();
+    const { firstImage } = stateGuiMediator();
     firstImage.addEventListener('load', _distributeCards);
 
     function _distributeCards(e) {
       const IMG_WIDTH = e.target.getBoundingClientRect().width;
-      const sliderWrapper = document.querySelector('article');
-      const root = window.getComputedStyle(sliderWrapper);
+      const rootElement = document.documentElement;
+      const root = window.getComputedStyle(rootElement);
       const CARD_WIDTH = parseInt(root.getPropertyValue('--card-width'));
-      const DIST_BTWN_CARDS = parseInt(
-        root.getPropertyValue('--dist-btwn-cards')
-      );
-      stateUpdate({ IMG_WIDTH, CARD_WIDTH, DIST_BTWN_CARDS });
+      const CARD_GAP = parseInt(root.getPropertyValue('--card-gap'));
       const imageOverflow = (IMG_WIDTH - CARD_WIDTH) / 2;
-      const cardGridGap = false
+      const DIST_BTWN_CARDS = false
         ? window.innerWidth / 2 - IMG_WIDTH / 2 - CARD_WIDTH / 2
-        : DIST_BTWN_CARDS + imageOverflow * 2;
-      sliderWrapper.style.setProperty('--dist-btwn-cards', `${cardGridGap}px`);
+        : CARD_GAP + imageOverflow * 2;
+      SET({ IMG_WIDTH, CARD_WIDTH, CARD_GAP, DIST_BTWN_CARDS });
+      // rootElement.style.setProperty('--card-gap', `${DIST_BTWN_CARDS}px`);
       // debugger;
       // const root = window.getComputedStyle(document.querySelector(':root'));
       // root.setProperty('--dist-btwn-cards', imgWidth / 2 + gawBetween);
@@ -44,7 +43,7 @@ function addListeners() {
 }
 
 function handleClick(e) {
-  // const { cardsWrapper } = viewModel();
+  // const { cardsWrapper } = stateGuiMediator();
   const selectedCard = e.target.closest('.card-section');
   if (!selectedCard) return;
   const { index } = selectedCard.dataset;
@@ -54,7 +53,7 @@ function handleClick(e) {
 }
 
 function slideCards(selectedCard, index) {
-  const { cardsWrapper, cardsCollection } = viewModel();
+  const { cardsWrapper, cardsCollection, STATE } = stateGuiMediator();
   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
   // const cardsWrapperBoundaries = cardsWrapper.getBoundingClientRect();
   // eslint-disable-next-line
@@ -67,7 +66,7 @@ function slideCards(selectedCard, index) {
             .split(',')[4]
         )
       : 0;
-  const endValue = global.DIST_BTWN_CARDS.current * index * -1;
+  const endValue = STATE.DIST_BTWN_CARDS * index * -1;
   console.log(startValue, endValue);
 
   motionBlur(cardsWrapper, {
@@ -96,69 +95,42 @@ function slideCards(selectedCard, index) {
 //   (offsetLeft + global.CARD_CENTER_OFFSET) * -1
 // }px)`;
 
-let global = Object.freeze({
-  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
+window.global = Object.freeze({
+  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: false },
+  CARD_GAP: { current: 100, unit: 'px', css: true },
   DIST_BTWN_CARDS: { current: 400, unit: 'px', css: true },
-  CARD_WIDTH: { current: 300, unit: 'px', css: true },
-  IMG_WIDTH: { current: 300, unit: 'px', css: true },
+  CARD_WIDTH: { current: 300, unit: 'px', css: false },
+  IMG_WIDTH: { current: 300, unit: 'px', css: false },
 });
 
 function resetCardsPos() {
-  const { cardsCollection, cardsWrapper, stateUpdate } = viewModel();
-  const { CARD_WIDTH } = global;
+  const { cardsCollection, cardsWrapper, SET } = stateGuiMediator();
+  const { CARD_WIDTH } = window.global;
   const cardStyles = cardsCollection[0].getBoundingClientRect();
   const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH.current / 2);
   const DIST_BTWN_CARDS =
     cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
   cardsWrapper.style.left = `${CARD_CENTER_OFFSET * -1}px`;
-  stateUpdate({
+  SET({
     DIST_BTWN_CARDS,
     CARD_CENTER_OFFSET,
   });
-  console.table(global);
+  console.table(window.global);
 }
 
-function viewModel() {
-  const _cssCustomPropRoot = document.documentElement;
+function stateGuiMediator() {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
-  // Mini state helper functions.
-  const _stateKeyExist = (keyValueObj) =>
-    Object.keys(keyValueObj)
-      .map((key) => !!global[key])
-      .some(Boolean);
-  const stateUpdate = (keyValueObj) => {
-    Object.keys(keyValueObj).forEach((key) => {
-      // val can be simple number, partial object or full object.
-      // full object => {current: 12, unit: 'px', css: true}
-      const isObj = (val) => typeof val === 'object';
-      const val = isObj(keyValueObj[key])
-        ? { ...global[key], ...keyValueObj[key] }
-        : { ...global[key], current: keyValueObj[key] };
-      pushToCssCustProp({ key, val });
-      global = { ...global, ...val };
-    });
-  };
-  const stateAdd = (keyValueObj) =>
-    !_stateKeyExist(keyValueObj)
-      ? stateUpdate(keyValueObj)
-      : console.error(`One or more keys already existed in state.`);
-  const pushToCssCustProp = ({ key, val }) => {
-    if (!val.css) return;
-    debugger;
-    viewModel()._cssCustomPropRoot.style.setProperty(
-      `--${key.replace('_', '-')}`,
-      val.current
-    );
-  };
+  // Micro state helper functions.
+  const { ADD, SET, STATE } = microState();
   return {
     cardsCollection,
     cardsWrapper,
     firstImage,
-    stateUpdate,
-    stateAdd,
-    _cssCustomPropRoot,
+    ADD,
+    SET,
+    STATE,
   };
 }
 
