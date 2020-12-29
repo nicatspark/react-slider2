@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import motionBlur from './motion-blur-move';
 import './App.scss';
 
@@ -141,30 +141,31 @@ function viewModel() {
 
 function fetchApi() {
   return new Promise((resolve) => {
-    const cardsObj = [
+    const tempUrl = 'https://source.unsplash.com/random/500x500';
+    const cardsArr = [
       {
         header: 'header1',
-        imageUrl: 'https://via.placeholder.com/500',
+        imageUrl: tempUrl,
       },
       {
         header: 'header2',
-        imageUrl: 'https://via.placeholder.com/500',
+        imageUrl: tempUrl,
       },
       {
         header: 'header3',
-        imageUrl: 'https://via.placeholder.com/500',
+        imageUrl: tempUrl,
       },
       {
         header: 'header4',
-        imageUrl: 'https://via.placeholder.com/500',
+        imageUrl: tempUrl,
       },
       {
         header: 'header5',
-        imageUrl: 'https://via.placeholder.com/500',
+        imageUrl: tempUrl,
       },
     ];
     setTimeout(() => {
-      resolve(cardsObj);
+      resolve(cardsArr);
     }, 2000);
   });
 }
@@ -176,7 +177,7 @@ async function preloadImages(cards) {
     'One or more card options lack imgurl.'
   );
   await addImageProcess(cards[0].imageUrl);
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const loadArr = [...cards]
       .splice(1)
       .map((card) => addImageProcess(card.imageUrl));
@@ -185,7 +186,9 @@ async function preloadImages(cards) {
         console.log('slider', 'Images loaded', values);
         resolve();
       })
-      .catch((err) => console.error(err));
+      .catch(() => {
+        reject('Problem loading images.');
+      });
     resolve();
   });
 
@@ -202,18 +205,28 @@ async function preloadImages(cards) {
 function App() {
   const [options, setOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
+  const cardContainer = useRef(null);
 
   useEffect(() => {
     const init = async () => {
-      const cardsObj = await fetchApi();
-      await preloadImages(cardsObj);
+      const cardsArr = await fetchApi();
+      await preloadImages(cardsArr);
       setPreloading(false);
-      setOptions(cardsObj);
+      // setImageSource(cardsArr);
+      setOptions(cardsArr);
       await initiate();
       console.log('React inited');
     };
     init();
   }, [setOptions]);
+
+  // function setImageSource(cardsArr) {
+  //   const allImgs = cardContainer.current.querySelectorAll('.image > img');
+  //   debugger;
+  //   [...allImgs].forEach((img, i) =>
+  //     img.setAttribute('src', cardsArr[i].imageUrl)
+  //   );
+  // }
 
   return (
     <div className="App">
@@ -223,6 +236,7 @@ function App() {
         </header>
         <article>
           <section
+            ref={cardContainer}
             className={`card-container${preloading ? ' ispreloading' : ''}`}
           >
             <div className="card-wrapper">
@@ -230,7 +244,7 @@ function App() {
                 options.map((o, i) => (
                   <div key={i} className="card-section center" data-index={i}>
                     <div className="image">
-                      <img src="https://via.placeholder.com/500" alt="" />
+                      <img src={o.imageUrl} alt="" />
                     </div>
                     <div className="header">
                       <h4>{o.header}</h4>
