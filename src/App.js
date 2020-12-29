@@ -1,8 +1,11 @@
 import { useEffect, useState, useRef } from 'react';
 import motionBlur from './motion-blur-move';
+import miniStore from './miniStore';
 import './App.scss';
 
 async function initiate() {
+  miniStore.INIT = { test: 'test' };
+  console.log('miniStore.STATE', miniStore.STATE);
   await adjustCardSpacing();
   return new Promise((resolve) => {
     resetCardsPos();
