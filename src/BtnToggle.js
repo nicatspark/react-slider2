@@ -43,11 +43,14 @@ const ZoomToggle = styled.div`
     }
   }
   label {
-    opacity: 1;
+    opacity: 0.7;
     white-space: nowrap;
     color: white;
     text-transform: uppercase;
     font-size: 0.7em;
+    i {
+      font-size: 1.5em;
+    }
   }
 `;
 ZoomToggle.displayName = 'BtnToggle';
@@ -58,7 +61,10 @@ export default function BtnToggle() {
       <div className="frame">
         <div className="knob"></div>
       </div>
-      <label>Zoom out</label>
+      <label>
+        {/* <i className="fas fa-search-plus"></i> */}
+        zoom out
+      </label>
     </ZoomToggle>
   );
 }
