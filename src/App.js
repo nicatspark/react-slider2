@@ -15,27 +15,35 @@ async function initiate() {
 function adjustCardSpacing() {
   const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
-    const { firstImage } = stateGuiMediator();
+    const { firstImage, documentRoot } = stateGuiMediator();
     firstImage.addEventListener('load', _distributeCards);
 
     function _distributeCards(e) {
       const IMG_WIDTH = e.target.getBoundingClientRect().width;
-      const rootElement = document.documentElement;
-      const root = window.getComputedStyle(rootElement);
-      const CARD_WIDTH = parseInt(root.getPropertyValue('--card-width'));
-      const CARD_GAP = parseInt(root.getPropertyValue('--card-gap'));
+      const rootStyle = window.getComputedStyle(documentRoot);
+      const CARD_WIDTH = parseInt(rootStyle.getPropertyValue('--card-width'));
+      const CARD_GAP = parseInt(rootStyle.getPropertyValue('--card-gap'));
       const imageOverflow = (IMG_WIDTH - CARD_WIDTH) / 2;
-      const DIST_BTWN_CARDS = false
-        ? window.innerWidth / 2 - IMG_WIDTH / 2 - CARD_WIDTH / 2
-        : CARD_GAP + imageOverflow * 2;
-      SET({ IMG_WIDTH, CARD_WIDTH, CARD_GAP, DIST_BTWN_CARDS });
-      // rootElement.style.setProperty('--card-gap', `${DIST_BTWN_CARDS}px`);
-      // debugger;
-      // const root = window.getComputedStyle(document.querySelector(':root'));
-      // root.setProperty('--dist-btwn-cards', imgWidth / 2 + gawBetween);
+      // TODO: this is not scroll distance.
+      const CARD_SCROLL_DISTANCE = CARD_GAP + imageOverflow * 2;
+      SET({ IMG_WIDTH, CARD_WIDTH, CARD_GAP, CARD_SCROLL_DISTANCE });
       resolve();
     }
   });
+}
+
+function resetCardsPos() {
+  const { cardsCollection, SET, STATE } = stateGuiMediator();
+  const { CARD_WIDTH } = STATE;
+  const cardStyles = cardsCollection[0].getBoundingClientRect();
+  const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH / -2);
+  const CARD_SCROLL_DISTANCE =
+    cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
+  SET({
+    CARD_SCROLL_DISTANCE,
+    CARD_CENTER_OFFSET,
+  });
+  console.table(window.global);
 }
 
 function addListeners() {
@@ -55,7 +63,6 @@ function handleClick(e) {
 function slideCards(selectedCard, index) {
   const { cardsWrapper, cardsCollection, STATE } = stateGuiMediator();
   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
-  // const cardsWrapperBoundaries = cardsWrapper.getBoundingClientRect();
   // eslint-disable-next-line
   const regexParentesisContent = /\(([^\)]*)\)/;
   const startValue =
@@ -66,7 +73,7 @@ function slideCards(selectedCard, index) {
             .split(',')[4]
         )
       : 0;
-  const endValue = STATE.DIST_BTWN_CARDS * index * -1;
+  const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
   console.log(startValue, endValue);
 
   motionBlur(cardsWrapper, {
@@ -79,7 +86,7 @@ function slideCards(selectedCard, index) {
       },
     ],
     applyToggle: false,
-    easing: 'easeOutBack',
+    easing: 'easeOutQuad',
     useMotionBlur: true,
     blurMultiplier: 0.2,
   }).then(({ element }) => {
@@ -91,43 +98,26 @@ function slideCards(selectedCard, index) {
   });
 }
 
-// cardsWrapper.style.transform = `translateX(${
-//   (offsetLeft + global.CARD_CENTER_OFFSET) * -1
-// }px)`;
-
 window.global = Object.freeze({
-  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: false },
+  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
   CARD_GAP: { current: 100, unit: 'px', css: true },
-  DIST_BTWN_CARDS: { current: 400, unit: 'px', css: true },
+  CARD_SCROLL_DISTANCE: { current: 400, unit: 'px', css: true },
   CARD_WIDTH: { current: 300, unit: 'px', css: false },
   IMG_WIDTH: { current: 300, unit: 'px', css: false },
 });
-
-function resetCardsPos() {
-  const { cardsCollection, cardsWrapper, SET } = stateGuiMediator();
-  const { CARD_WIDTH } = window.global;
-  const cardStyles = cardsCollection[0].getBoundingClientRect();
-  const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH.current / 2);
-  const DIST_BTWN_CARDS =
-    cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
-  cardsWrapper.style.left = `${CARD_CENTER_OFFSET * -1}px`;
-  SET({
-    DIST_BTWN_CARDS,
-    CARD_CENTER_OFFSET,
-  });
-  console.table(window.global);
-}
 
 function stateGuiMediator() {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
+  const documentRoot = document.documentElement;
   // Micro state helper functions.
   const { ADD, SET, STATE } = microState();
   return {
     cardsCollection,
     cardsWrapper,
     firstImage,
+    documentRoot,
     ADD,
     SET,
     STATE,

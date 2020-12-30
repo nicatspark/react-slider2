@@ -2,6 +2,7 @@
   --header-height: 100px;
   --card-gap: 100px;
   --card-width: 300px;
+  --card-center-offset: calc(var(--card-width) / -2);
 }
 
 .App {
@@ -47,6 +48,7 @@ div.card-wrapper {
   grid-auto-flow: column;
   will-change: transform;
   transform-origin: center;
+  left: var(--card-center-offset);
   // transition: transform 400ms ease-out;
 }
 
@@ -79,7 +81,7 @@ div.card-section {
 }
 
 .preloader-card {
-  transform: translateX(-50%);
+  // transform: translateX(-50%);
   width: var(--card-width);
   & > div {
     width: var(--card-width);
