@@ -38,6 +38,11 @@ section {
   width: 1px;
   height: 100%;
   margin: 0 auto;
+  transform: scale(1);
+  transition: transform 400ms ease-in-out;
+  &.zoomed-out {
+    transform: scale(0.4);
+  }
 }
 
 div.card-wrapper {
@@ -58,7 +63,7 @@ div.card-section {
   width: var(--card-width);
   height: inherit;
   display: grid;
-  grid-template-rows: 3fr auto 1fr;
+  grid-template-rows: 55vh auto 1fr;
   gap: 0.5rem;
   place-items: center;
   &:not(.preloader-card) > div {

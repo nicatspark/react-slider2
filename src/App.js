@@ -113,11 +113,13 @@ function stateGuiMediator() {
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
   const documentRoot = document.documentElement;
+  const cardContainer = document.querySelectorAll('card-container');
   // Micro state helper functions.
   const { ADD, SET, STATE } = microState();
   return {
     cardsCollection,
     cardsWrapper,
+    cardContainer,
     firstImage,
     documentRoot,
     ADD,
@@ -157,42 +159,13 @@ function fetchApi() {
   });
 }
 
-// async function preloadImages(cards) {
-//   // load 1st image first, then the rest in parallel.
-//   console.assert(
-//     cards.map((c) => !!c.imageUrl).every(Boolean),
-//     'One or more card options lack imgurl.'
-//   );
-//   await addImageProcess(cards[0].imageUrl);
-//   return new Promise((resolve, reject) => {
-//     const loadArr = [...cards]
-//       .splice(1)
-//       .map((card) => addImageProcess(card.imageUrl));
-//     Promise.all(loadArr)
-//       .then((values) => {
-//         console.log('slider', 'Images loaded', values);
-//         resolve();
-//       })
-//       .catch(() => {
-//         reject('Problem loading images.');
-//       });
-//     resolve();
-//   });
-
-//   function addImageProcess(src) {
-//     return new Promise((resolve, reject) => {
-//       let img = new Image();
-//       img.onload = () => resolve(true);
-//       img.onerror = reject;
-//       img.src = src;
-//     });
-//   }
-// }
-
 function App() {
   const [options, setOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
+  const [zoomedOut, setZoomedOut] = useState(false);
   const cardContainer = useRef(null);
+
+  const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
   useEffect(() => {
     const init = async () => {
@@ -207,14 +180,6 @@ function App() {
     init();
   }, [setOptions]);
 
-  // function setImageSource(cardsArr) {
-  //   const allImgs = cardContainer.current.querySelectorAll('.image > img');
-  //   debugger;
-  //   [...allImgs].forEach((img, i) =>
-  //     img.setAttribute('src', cardsArr[i].imageUrl)
-  //   );
-  // }
-
   return (
     <div className="App">
       <div className="pancake-grid">
@@ -224,7 +189,9 @@ function App() {
         <article>
           <section
             ref={cardContainer}
-            className={`card-container${preloading ? ' ispreloading' : ''}`}
+            className={`card-container${preloading ? ' ispreloading' : ''}${
+              zoomedOut ? ' zoomed-out' : ''
+            }`}
           >
             <div className="card-wrapper">
               {!preloading ? (
@@ -255,7 +222,7 @@ function App() {
           </section>
         </article>
       </div>
-      <BtnToggle></BtnToggle>
+      <BtnToggle toggleZoomInOut={toggleZoomInOut}></BtnToggle>
     </div>
   );
 }

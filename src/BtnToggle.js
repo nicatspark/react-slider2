@@ -43,10 +43,11 @@ const ZoomToggle = styled.div`
 `;
 ZoomToggle.displayName = 'BtnToggle';
 
-export default function BtnToggle() {
+export default function BtnToggle({ toggleZoomInOut }) {
   const [active, setActive] = useState(false);
 
   function toggle() {
+    toggleZoomInOut();
     setActive(!active);
   }
 
