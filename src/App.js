@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
+import BtnToggle from './BtnToggle';
 import './App.scss';
 
 async function initiate() {
@@ -44,7 +45,7 @@ function resetCardsPos() {
     CARD_SCROLL_DISTANCE,
     CARD_CENTER_OFFSET,
   });
-  console.table(window.global);
+  console.table(STATE);
 }
 
 function addListeners() {
@@ -254,6 +255,7 @@ function App() {
           </section>
         </article>
       </div>
+      <BtnToggle></BtnToggle>
     </div>
   );
 }
