@@ -5,6 +5,15 @@ import preloadImages from './utils/preloadImages';
 import BtnToggle from './BtnToggle';
 import './App.scss';
 
+window.global = Object.freeze({
+  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
+  CARD_GAP: { current: 100, unit: 'px', css: true },
+  CARD_SCROLL_DISTANCE: { current: 400, unit: 'px', css: true },
+  CARD_WIDTH: { current: 300, unit: 'px', css: false },
+  IMG_WIDTH: { current: 300, unit: 'px', css: false },
+  CARD_IMG_SPACING: { current: 20, unit: 'px', css: false },
+});
+
 async function initiate() {
   await adjustCardSpacing();
   return new Promise((resolve) => {
@@ -24,25 +33,35 @@ function adjustCardSpacing() {
       const IMG_WIDTH = e.target.getBoundingClientRect().width;
       const rootStyle = window.getComputedStyle(documentRoot);
       const CARD_WIDTH = parseInt(rootStyle.getPropertyValue('--card-width'));
-      const CARD_GAP = parseInt(rootStyle.getPropertyValue('--card-gap'));
       const imageOverflow = (IMG_WIDTH - CARD_WIDTH) / 2;
+      const CARD_IMG_SPACING = parseInt(
+        rootStyle.getPropertyValue('--card-img-spacing')
+      );
+      const CARD_GAP = CARD_IMG_SPACING + imageOverflow * 2; // parseInt(rootStyle.getPropertyValue('--card-gap'));
       // TODO: this is not scroll distance.
-      const CARD_SCROLL_DISTANCE = CARD_GAP + imageOverflow * 2;
-      SET({ IMG_WIDTH, CARD_WIDTH, CARD_GAP, CARD_SCROLL_DISTANCE });
+      const CARD_SCROLL_DISTANCE =
+        CARD_WIDTH + imageOverflow * 2 + CARD_IMG_SPACING;
+      console.log('CARD_SCROLL_DISTANCE', CARD_SCROLL_DISTANCE);
+      SET({
+        IMG_WIDTH,
+        CARD_WIDTH,
+        CARD_GAP,
+        CARD_SCROLL_DISTANCE,
+        CARD_IMG_SPACING,
+      });
       resolve();
     }
   });
 }
 
 function resetCardsPos() {
-  const { cardsCollection, SET, STATE } = stateGuiMediator();
+  const { SET, STATE } = stateGuiMediator();
   const { CARD_WIDTH } = STATE;
-  const cardStyles = cardsCollection[0].getBoundingClientRect();
+  // const cardStyles = cardsCollection[0].getBoundingClientRect();
   const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH / -2);
-  const CARD_SCROLL_DISTANCE =
-    cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
+  // const CARD_SCROLL_DISTANCE =
+  //   cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
   SET({
-    CARD_SCROLL_DISTANCE,
     CARD_CENTER_OFFSET,
   });
   console.table(STATE);
@@ -99,14 +118,6 @@ function slideCards(selectedCard, index) {
     cardsCollection[index].classList.add('selected');
   });
 }
-
-window.global = Object.freeze({
-  CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
-  CARD_GAP: { current: 100, unit: 'px', css: true },
-  CARD_SCROLL_DISTANCE: { current: 400, unit: 'px', css: true },
-  CARD_WIDTH: { current: 300, unit: 'px', css: false },
-  IMG_WIDTH: { current: 300, unit: 'px', css: false },
-});
 
 function stateGuiMediator() {
   const cardsCollection = document.querySelectorAll('.card-section');
@@ -198,7 +209,7 @@ function App() {
                 options.map((o, i) => (
                   <div key={i} className="card-section center" data-index={i}>
                     <div className="image">
-                      <img src={o.imageUrl} alt="" />
+                      <img src={o.imageUrl} alt={o.header} />
                     </div>
                     <div className="header">
                       <h4>{o.header}</h4>

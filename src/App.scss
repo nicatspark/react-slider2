@@ -1,8 +1,9 @@
 :root {
   --header-height: 100px;
-  --card-gap: 100px;
+  --card-gap: 100px; // image spacing will overwrite this.
   --card-width: 300px;
   --card-center-offset: calc(var(--card-width) / -2);
+  --card-img-spacing: 100px; // Source for distribution.
 }
 
 .App {
