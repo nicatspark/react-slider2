@@ -13,8 +13,10 @@ const microState = () => {
       const val = isObj(keyValueObj[key])
         ? { ...store[key], ...keyValueObj[key] }
         : { ...store[key], current: keyValueObj[key] };
+      const tempKeyVal = {};
+      tempKeyVal[key] = val;
       _pushToCssCustProp({ key, val });
-      store = { ...store, ...val };
+      window.global = { ...window.global, ...tempKeyVal };
     });
   };
   const ADD = (keyValueObj) =>
