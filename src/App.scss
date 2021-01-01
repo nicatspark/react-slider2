@@ -49,13 +49,17 @@ section {
 div.card-wrapper {
   position: relative;
   display: inline-grid;
-  border: 1px green solid;
   gap: var(--card-gap);
   grid-auto-flow: column;
   will-change: transform;
   transform-origin: center;
   left: var(--card-center-offset);
-  // transition: transform 400ms ease-out;
+  opacity: 1;
+  transition: opacity 400ms linear;
+  &.transparent {
+    opacity: 0;
+    transition: none;
+  }
 }
 
 div.card-section {

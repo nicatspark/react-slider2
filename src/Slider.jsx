@@ -171,6 +171,7 @@ function fetchApi() {
 function Slider({zoomedOut}) {
   const [options, setOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
+  const [hideSlider, setHideSlider] = useState(false);
   const cardContainer = useRef();
 
   useEffect(() => {
@@ -178,9 +179,11 @@ function Slider({zoomedOut}) {
       const cardsArr = await fetchApi();
       await preloadImages(cardsArr);
       setPreloading(false);
+      setHideSlider(true);
       // setImageSource(cardsArr);
       setOptions(cardsArr);
       await initiate();
+      setHideSlider(false);
       console.log('React inited');
     };
     init();
@@ -193,7 +196,7 @@ function Slider({zoomedOut}) {
         zoomedOut ? ' zoomed-out' : ''
       }`}
     >
-      <div className="card-wrapper">
+      <div className={`card-wrapper${hideSlider?' transparent':''}`}>
         {!preloading ? (
           options.map((o, i) => (
             <div key={i} className="card-section center" data-index={i}>
