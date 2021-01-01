@@ -3,7 +3,7 @@ import styled from 'styled-components';
 
 const ZoomToggle = styled.div`
   --size: 7em;
-  position: absolute;
+  position: fixed;
   left: calc(var(--size) / -2);
   bottom: calc(var(--size) / -2);
   background-color: black;

@@ -1,9 +1,7 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef } from 'react'
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
-import BtnToggle from './BtnToggle';
-import './App.scss';
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -170,13 +168,10 @@ function fetchApi() {
   });
 }
 
-function App() {
+function Slider({zoomedOut}) {
   const [options, setOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
-  const [zoomedOut, setZoomedOut] = useState(false);
-  const cardContainer = useRef(null);
-
-  const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
+  const cardContainer = useRef();
 
   useEffect(() => {
     const init = async () => {
@@ -192,50 +187,40 @@ function App() {
   }, [setOptions]);
 
   return (
-    <div className="App">
-      <div className="pancake-grid">
-        <header>
-          <h1>Configurator</h1>
-        </header>
-        <article>
-          <section
-            ref={cardContainer}
-            className={`card-container${preloading ? ' ispreloading' : ''}${
-              zoomedOut ? ' zoomed-out' : ''
-            }`}
-          >
-            <div className="card-wrapper">
-              {!preloading ? (
-                options.map((o, i) => (
-                  <div key={i} className="card-section center" data-index={i}>
-                    <div className="image">
-                      <img src={o.imageUrl} alt={o.header} />
-                    </div>
-                    <div className="header">
-                      <h4>{o.header}</h4>
-                    </div>
-                    <div className="paragraph">
-                      Lorem ipsum dolor sit amet consectetur adipisicing elit.
-                      Accusantium quidem nostrum veritatis odio, maiores quasi?
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="card-section center preloader-card">
-                  <div className="image animated-background"></div>
-                  <div className="header animated-background">
-                    <h4>&nbsp;</h4>
-                  </div>
-                  <div className="paragraph animated-background">&nbsp;</div>
-                </div>
-              )}
+    <section
+      ref={cardContainer}
+      className={`card-container${preloading ? ' ispreloading' : ''}${
+        zoomedOut ? ' zoomed-out' : ''
+      }`}
+    >
+      <div className="card-wrapper">
+        {!preloading ? (
+          options.map((o, i) => (
+            <div key={i} className="card-section center" data-index={i}>
+              <div className="image">
+                <img src={o.imageUrl} alt={o.header} />
+              </div>
+              <div className="header">
+                <h4>{o.header}</h4>
+              </div>
+              <div className="paragraph">
+                Lorem ipsum dolor sit amet consectetur adipisicing elit.
+                Accusantium quidem nostrum veritatis odio, maiores quasi?
+              </div>
             </div>
-          </section>
-        </article>
+          ))
+        ) : (
+          <div className="card-section center preloader-card">
+            <div className="image animated-background"></div>
+            <div className="header animated-background">
+              <h4>&nbsp;</h4>
+            </div>
+            <div className="paragraph animated-background">&nbsp;</div>
+          </div>
+        )}
       </div>
-      <BtnToggle toggleZoomInOut={toggleZoomInOut}></BtnToggle>
-    </div>
-  );
+    </section>
+  )
 }
 
-export default App;
+export default Slider
