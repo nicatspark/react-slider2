@@ -1,7 +1,10 @@
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef } from 'react';
+import BtnToggle from './BtnToggle.jsx';
+import Portal from './Portal';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
+// import Hammer from 'hammerjs';
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -10,13 +13,15 @@ window.global = Object.freeze({
   CARD_WIDTH: { current: 300, unit: 'px', css: false },
   IMG_WIDTH: { current: 300, unit: 'px', css: false },
   CARD_IMG_SPACING: { current: 20, unit: 'px', css: false },
+  SELECTED_INDEX: { current: 0, unit: '', css: false },
+  CARDS_MOVING: { current: 0, unit: '', css: false },
+  CARDS: { current: [], unit: '', css: false },
 });
 
 async function initiate() {
   await adjustCardSpacing();
   return new Promise((resolve) => {
     resetCardsPos();
-    addListeners();
     resolve();
   });
 }
@@ -36,10 +41,8 @@ function adjustCardSpacing() {
         rootStyle.getPropertyValue('--card-img-spacing')
       );
       const CARD_GAP = CARD_IMG_SPACING + imageOverflow * 2; // parseInt(rootStyle.getPropertyValue('--card-gap'));
-      // TODO: this is not scroll distance.
       const CARD_SCROLL_DISTANCE =
         CARD_WIDTH + imageOverflow * 2 + CARD_IMG_SPACING;
-      console.log('CARD_SCROLL_DISTANCE', CARD_SCROLL_DISTANCE);
       SET({
         IMG_WIDTH,
         CARD_WIDTH,
@@ -65,22 +68,19 @@ function resetCardsPos() {
   console.table(STATE);
 }
 
-function addListeners() {
-  window.addEventListener('click', handleClick);
-}
-
 function handleClick(e) {
-  // const { cardsWrapper } = stateGuiMediator();
+  const { SET } = stateGuiMediator();
   const selectedCard = e.target.closest('.card-section');
   if (!selectedCard) return;
   const { index } = selectedCard.dataset;
-  console.log(selectedCard, e);
+  SET({ SELECTED_INDEX: index });
   // cardsWrapper.style.left = global.CARD_CENTER_OFFSET * -1 + 'px';
-  slideCards(selectedCard, index);
+  slideCards({ selectedCard, index }).then(() => console.log('#######'));
 }
 
-function slideCards(selectedCard, index) {
-  const { cardsWrapper, cardsCollection, STATE } = stateGuiMediator();
+function slideCards({ selectedCard, index }) {
+  const { cardsWrapper, cardsCollection, SET, STATE } = stateGuiMediator();
+  _setState({ selectedCard, index });
   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
   // eslint-disable-next-line
   const regexParentesisContent = /\(([^\)]*)\)/;
@@ -95,7 +95,7 @@ function slideCards(selectedCard, index) {
   const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
   console.log(startValue, endValue);
 
-  motionBlur(cardsWrapper, {
+  return motionBlur(cardsWrapper, {
     durationMs: 250,
     properties: [
       {
@@ -115,6 +115,12 @@ function slideCards(selectedCard, index) {
     });
     cardsCollection[index].classList.add('selected');
   });
+  function _setState({ selectedCard, index }) {
+    let CARDS_MOVING = 0;
+    if (selectedCard > STATE.SELECTED_INDEX) CARDS_MOVING = 1;
+    if (selectedCard > STATE.SELECTED_INDEX) CARDS_MOVING = -1;
+    SET({ SELECTED_INDEX: index, CARDS_MOVING });
+  }
 }
 
 function stateGuiMediator() {
@@ -122,7 +128,7 @@ function stateGuiMediator() {
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
   const documentRoot = document.documentElement;
-  const cardContainer = document.querySelectorAll('card-container');
+  const cardContainer = document.querySelector('.card-container');
   // Micro state helper functions.
   const { ADD, SET, STATE } = microState();
   return {
@@ -138,6 +144,7 @@ function stateGuiMediator() {
 }
 
 function fetchApi() {
+  const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
     const tempUrl = 'https://source.unsplash.com/random/500x500';
     const cardsArr = [
@@ -163,16 +170,44 @@ function fetchApi() {
       },
     ];
     setTimeout(() => {
+      SET({ CARDS: cardsArr });
       resolve(cardsArr);
     }, 2000);
   });
 }
 
-function Slider({zoomedOut}) {
+const handleGestures = (e, setZoomedOut) => {
+  const { STATE } = stateGuiMediator();
+  e.preventDefault();
+  if (e.ctrlKey) {
+    setZoomedOut(!!Math.max(0, e.deltaY));
+  } else {
+    if (e.deltaX < 0 || Math.abs(STATE.CARDS_MOVING) !== 0) return;
+    console.log('PAN', e.deltaX);
+    if (e.deltaX < 0) {
+      // previous card.
+      const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
+      slideCards({ selectedIndex: nextSelectedIndex });
+    } else {
+      // Next card.
+      const nextSelectedIndex = Math.min(
+        STATE.CARDS.length - 1,
+        STATE.SELECTED_INDEX + 1
+      );
+      slideCards({ selectedIndex: nextSelectedIndex });
+    }
+  }
+};
+
+function Slider() {
+  console.log('rendered');
   const [options, setOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
   const [hideSlider, setHideSlider] = useState(false);
   const cardContainer = useRef();
+  const [zoomedOut, setZoomedOut] = useState(false);
+
+  const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
   useEffect(() => {
     const init = async () => {
@@ -189,6 +224,16 @@ function Slider({zoomedOut}) {
     init();
   }, [setOptions]);
 
+  useEffect(() => {
+    const el = cardContainer.current;
+    el.addEventListener('wheel', (e) => handleGestures(e, setZoomedOut));
+    window.addEventListener('click', handleClick);
+    return () => {
+      el.removeEventListener('wheel', (e) => handleGestures(e, setZoomedOut));
+      window.removeEventListener('click', handleClick);
+    };
+  }, [zoomedOut]);
+
   return (
     <section
       ref={cardContainer}
@@ -196,7 +241,7 @@ function Slider({zoomedOut}) {
         zoomedOut ? ' zoomed-out' : ''
       }`}
     >
-      <div className={`card-wrapper${hideSlider?' transparent':''}`}>
+      <div className={`card-wrapper${hideSlider ? ' transparent' : ''}`}>
         {!preloading ? (
           options.map((o, i) => (
             <div key={i} className="card-section center" data-index={i}>
@@ -222,8 +267,11 @@ function Slider({zoomedOut}) {
           </div>
         )}
       </div>
+      <Portal>
+        <BtnToggle toggleZoomInOut={toggleZoomInOut}></BtnToggle>
+      </Portal>
     </section>
-  )
+  );
 }
 
-export default Slider
+export default Slider;

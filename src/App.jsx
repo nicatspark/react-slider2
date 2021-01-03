@@ -1,12 +1,8 @@
-import { useState } from 'react';
+import React from 'react';
 import './App.scss';
 import Slider from './Slider';
-import BtnToggle from './BtnToggle';
 
 function App() {
-  const [zoomedOut, setZoomedOut] = useState(false);
-
-  const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
   return (
     <div className="App">
@@ -15,10 +11,10 @@ function App() {
           <h1>Configurator</h1>
         </header>
         <article>
-          <Slider zoomedOut={zoomedOut} />
+          <Slider />
         </article>
       </div>
-      <BtnToggle toggleZoomInOut={toggleZoomInOut}></BtnToggle>
+      
     </div>
   );
 }
