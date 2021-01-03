@@ -4,7 +4,7 @@ import Portal from './Portal';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
-// import Hammer from 'hammerjs';
+import _ from 'lodash';
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -26,7 +26,7 @@ async function initiate() {
   });
 }
 
-function adjustCardSpacing() {
+const adjustCardSpacing = () => {
   const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
     const { firstImage, documentRoot } = stateGuiMediator();
@@ -53,9 +53,9 @@ function adjustCardSpacing() {
       resolve();
     }
   });
-}
+};
 
-function resetCardsPos() {
+const resetCardsPos = () => {
   const { SET, STATE } = stateGuiMediator();
   const { CARD_WIDTH } = STATE;
   // const cardStyles = cardsCollection[0].getBoundingClientRect();
@@ -66,9 +66,9 @@ function resetCardsPos() {
     CARD_CENTER_OFFSET,
   });
   console.table(STATE);
-}
+};
 
-function handleClick(e) {
+const handleClick = (e) => {
   const { SET } = stateGuiMediator();
   const selectedCard = e.target.closest('.card-section');
   if (!selectedCard) return;
@@ -76,9 +76,9 @@ function handleClick(e) {
   SET({ SELECTED_INDEX: index });
   // cardsWrapper.style.left = global.CARD_CENTER_OFFSET * -1 + 'px';
   slideCards({ selectedCard, index }).then(() => console.log('#######'));
-}
+};
 
-function slideCards({ selectedCard, index }) {
+const slideCards = ({ selectedCard, index }) => {
   const { cardsWrapper, cardsCollection, SET, STATE } = stateGuiMediator();
   _setState({ selectedCard, index });
   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
@@ -121,9 +121,9 @@ function slideCards({ selectedCard, index }) {
     if (selectedCard > STATE.SELECTED_INDEX) CARDS_MOVING = -1;
     SET({ SELECTED_INDEX: index, CARDS_MOVING });
   }
-}
+};
 
-function stateGuiMediator() {
+const stateGuiMediator = () => {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
   const firstImage = cardsCollection[0].querySelector('img');
@@ -141,9 +141,9 @@ function stateGuiMediator() {
     SET,
     STATE,
   };
-}
+};
 
-function fetchApi() {
+const fetchApi = () => {
   const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
     const tempUrl = 'https://source.unsplash.com/random/500x500';
@@ -174,7 +174,7 @@ function fetchApi() {
       resolve(cardsArr);
     }, 2000);
   });
-}
+};
 
 const handleGestures = (e, setZoomedOut) => {
   const { STATE } = stateGuiMediator();
@@ -226,10 +226,22 @@ function Slider() {
 
   useEffect(() => {
     const el = cardContainer.current;
-    el.addEventListener('wheel', (e) => handleGestures(e, setZoomedOut));
+    el.addEventListener(
+      'wheel',
+      _.debounce((e) => handleGestures(e, setZoomedOut), 1000, {
+        leading: true,
+        trailing: false,
+      })
+    );
     window.addEventListener('click', handleClick);
     return () => {
-      el.removeEventListener('wheel', (e) => handleGestures(e, setZoomedOut));
+      el.removeEventListener(
+        'wheel',
+        _.debounce((e) => handleGestures(e, setZoomedOut), 1000, {
+          leading: true,
+          trailing: false,
+        })
+      );
       window.removeEventListener('click', handleClick);
     };
   }, [zoomedOut]);
