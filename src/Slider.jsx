@@ -229,7 +229,7 @@ function Slider() {
   }, [setOptions, setScrollDisabled]);
 
   useEffect(() => {
-    const el = cardContainer.current;
+    const el = cardContainer.current.parentElement;
     el.addEventListener(
       'wheel',
       _.debounce(
