@@ -19,6 +19,14 @@ const microState = () => {
       window.global = { ...window.global, ...tempKeyVal };
     });
   };
+  const SET_COMPLEX = (obj) => {
+    Object.keys(obj).forEach((key) => {
+      const val = { ...store[key], current: obj[key] };
+      const tempKeyVal = {};
+      tempKeyVal[key] = val;
+      window.global = { ...window.global, ...tempKeyVal };
+    });
+  };
   const ADD = (keyValueObj) =>
     !_stateKeyExist(keyValueObj)
       ? SET(keyValueObj)
@@ -41,6 +49,7 @@ const microState = () => {
     },
     ADD,
     SET,
+    SET_COMPLEX,
     _cssCustomPropRoot,
   };
 };
