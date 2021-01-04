@@ -59,29 +59,26 @@ const adjustCardSpacing = () => {
 const resetCardsPos = () => {
   const { SET, STATE } = stateGuiMediator();
   const { CARD_WIDTH } = STATE;
-  // const cardStyles = cardsCollection[0].getBoundingClientRect();
   const CARD_CENTER_OFFSET = Math.round(CARD_WIDTH / -2);
-  // const CARD_SCROLL_DISTANCE =
-  //   cardsCollection[1].getBoundingClientRect().x - cardStyles.x;
-  SET({
-    CARD_CENTER_OFFSET,
-  });
-  console.table(STATE);
+  SET({ CARD_CENTER_OFFSET });
 };
 
-const handleClick = (e) => {
-  const { SET } = stateGuiMediator();
+const handleClick = async (e) => {
   const selectedCard = e.target.closest('.card-section');
   if (!selectedCard) return;
-  const { index } = selectedCard.dataset;
-  SET({ SELECTED_INDEX: index });
-  // cardsWrapper.style.left = global.CARD_CENTER_OFFSET * -1 + 'px';
-  slideCards({ selectedCard, index }).then(() => console.log('#######'));
+  const { index: nextIndex } = selectedCard.dataset;
+  await slideCards({ nextIndex });
+  console.log('Card click done');
 };
 
-const slideCards = ({ selectedCard, index }) => {
+const slideCards = ({ nextIndex }) => {
+  console.assert(
+    !isNaN(nextIndex) && nextIndex >= 0,
+    `Wrong argument passed to slideCards function.`
+  );
+  const index = parseInt(nextIndex);
   const { cardsWrapper, cardsCollection, SET, STATE } = stateGuiMediator();
-  _setState({ selectedCard, index });
+  _setState({ index });
   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
   // eslint-disable-next-line
   const regexParentesisContent = /\(([^\)]*)\)/;
@@ -94,8 +91,12 @@ const slideCards = ({ selectedCard, index }) => {
         )
       : 0;
   const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
-  console.log(startValue, endValue);
-
+  //
+  const isChrome =
+    !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
+  const isEdgeChromium = isChrome && navigator.userAgent.indexOf('Edg') !== -1;
+  const useMotionBlur = isChrome || isEdgeChromium;
+  //
   return motionBlur(cardsWrapper, {
     durationMs: 250,
     properties: [
@@ -107,20 +108,24 @@ const slideCards = ({ selectedCard, index }) => {
     ],
     applyToggle: false,
     easing: 'easeOutQuad',
-    useMotionBlur: true,
+    useMotionBlur,
     blurMultiplier: 0.2,
   }).then(({ element }) => {
-    console.log('done', element, selectedCard);
+    SET({ CARDS_MOVING: 0 });
+    _setSelectedCardIndex(index);
+    console.log('done', element);
+  });
+  function _setState({ index }) {
+    let CARDS_MOVING = 0;
+    if (index > STATE.SELECTED_INDEX) CARDS_MOVING = 1;
+    if (index < STATE.SELECTED_INDEX) CARDS_MOVING = -1;
+    SET({ SELECTED_INDEX: index, CARDS_MOVING });
+  }
+  function _setSelectedCardIndex(index) {
     [...cardsCollection].forEach((card) => {
       card.classList.remove('selected');
     });
     cardsCollection[index].classList.add('selected');
-  });
-  function _setState({ selectedCard, index }) {
-    let CARDS_MOVING = 0;
-    if (selectedCard > STATE.SELECTED_INDEX) CARDS_MOVING = 1;
-    if (selectedCard > STATE.SELECTED_INDEX) CARDS_MOVING = -1;
-    SET({ SELECTED_INDEX: index, CARDS_MOVING });
   }
 };
 
@@ -131,7 +136,7 @@ const stateGuiMediator = () => {
   const documentRoot = document.documentElement;
   const cardContainer = document.querySelector('.card-container');
   // Micro state helper functions.
-  const { ADD, SET, STATE } = microState();
+  const { ADD, SET, STATE, SET_COMPLEX } = microState();
   return {
     cardsCollection,
     cardsWrapper,
@@ -141,11 +146,12 @@ const stateGuiMediator = () => {
     ADD,
     SET,
     STATE,
+    SET_COMPLEX,
   };
 };
 
 const fetchApi = () => {
-  const { SET } = stateGuiMediator();
+  // const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
     const tempUrl = 'https://source.unsplash.com/random/500x500';
     const cardsArr = [
@@ -171,34 +177,44 @@ const fetchApi = () => {
       },
     ];
     setTimeout(() => {
-      SET({ CARDS: cardsArr });
+      // SET({ CARDS: cardsArr });
       resolve(cardsArr);
     }, 2000);
   });
 };
 
+const setCardsToMicroState = (cards) => {
+  const { SET_COMPLEX } = stateGuiMediator();
+  SET_COMPLEX({ CARDS: cards });
+};
+
 const handleGestures = (e, setZoomedOut) => {
+  e.preventDefault();
   const { STATE } = stateGuiMediator();
-  // e.preventDefault();
   const pinchDetected = (e) => e.ctrlKey;
   const isZoomIn = (deltaY) => !!Math.max(0, deltaY);
+  const cardsAlreadyInMotion = () => !!Math.abs(STATE.CARDS_MOVING);
+  const horisontalSwipeDetected = (e) =>
+    Math.abs(e.deltaX) && Math.abs(e.deltaX) > Math.abs(e.deltaY);
+  //
   if (pinchDetected(e)) {
     setZoomedOut(isZoomIn(e.deltaY));
   } else {
-    if (e.deltaX < 0 || Math.abs(STATE.CARDS_MOVING) !== 0) return;
+    console.log(!horisontalSwipeDetected(e), cardsAlreadyInMotion());
+    if (!horisontalSwipeDetected(e) || cardsAlreadyInMotion()) return;
     console.log('PAN', e.deltaX);
-    // if (e.deltaX < 0) {
-    //   // previous card.
-    //   const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
-    //   slideCards({ selectedIndex: nextSelectedIndex });
-    // } else {
-    //   // Next card.
-    //   const nextSelectedIndex = Math.min(
-    //     STATE.CARDS.length - 1,
-    //     STATE.SELECTED_INDEX + 1
-    //   );
-    //   slideCards({ selectedIndex: nextSelectedIndex });
-    // }
+    if (e.deltaX < 0) {
+      // previous card.
+      const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
+      slideCards({ nextIndex: nextSelectedIndex });
+    } else {
+      // Next card.
+      const nextSelectedIndex = Math.min(
+        STATE.CARDS.length - 1,
+        STATE.SELECTED_INDEX + 1
+      );
+      slideCards({ nextIndex: nextSelectedIndex });
+    }
   }
 };
 
@@ -216,6 +232,7 @@ function Slider() {
   useEffect(() => {
     const init = async () => {
       const cardsArr = await fetchApi();
+      setCardsToMicroState(cardsArr);
       await preloadImages(cardsArr);
       setPreloading(false);
       setHideSlider(true);
@@ -232,33 +249,19 @@ function Slider() {
     const el = cardContainer.current.parentElement;
     el.addEventListener(
       'wheel',
-      _.debounce(
-        (e) => {
-          e.preventDefault();
-          handleGestures(e, setZoomedOut);
-        },
-        100,
-        {
-          leading: true,
-          trailing: false,
-        }
-      )
+      _.throttle((e) => handleGestures(e, setZoomedOut), 800, {
+        leading: true,
+        trailing: false,
+      })
     );
     window.addEventListener('click', handleClick);
     return () => {
       el.removeEventListener(
         'wheel',
-        _.debounce(
-          (e) => {
-            e.preventDefault();
-            handleGestures(e, setZoomedOut);
-          },
-          100,
-          {
-            leading: true,
-            trailing: false,
-          }
-        )
+        _.throttle((e) => handleGestures(e, setZoomedOut), 800, {
+          leading: true,
+          trailing: false,
+        })
       );
       window.removeEventListener('click', handleClick);
     };
