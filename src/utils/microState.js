@@ -33,7 +33,7 @@ const microState = () => {
       : console.error(`One or more keys already existed in state.`);
   const _pushToCssCustProp = ({ key, val }) => {
     if (!val.css) return;
-    const cssFormat = (s) => s.toLowerCase().replaceAll('_', '-');
+    const cssFormat = (s) => s.toLowerCase().replace(/_/g, '-');
     microState()._cssCustomPropRoot.style.setProperty(
       `--${cssFormat(key)}`,
       val.current + val.unit
