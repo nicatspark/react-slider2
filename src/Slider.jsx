@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import BtnToggle from './BtnToggle.jsx';
+import usePreventScroll from './utils/usePreventScroll';
 import Portal from './Portal';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
@@ -178,24 +179,26 @@ const fetchApi = () => {
 
 const handleGestures = (e, setZoomedOut) => {
   const { STATE } = stateGuiMediator();
-  e.preventDefault();
-  if (e.ctrlKey) {
-    setZoomedOut(!!Math.max(0, e.deltaY));
+  // e.preventDefault();
+  const pinchDetected = (e) => e.ctrlKey;
+  const isZoomIn = (deltaY) => !!Math.max(0, deltaY);
+  if (pinchDetected(e)) {
+    setZoomedOut(isZoomIn(e.deltaY));
   } else {
     if (e.deltaX < 0 || Math.abs(STATE.CARDS_MOVING) !== 0) return;
     console.log('PAN', e.deltaX);
-    if (e.deltaX < 0) {
-      // previous card.
-      const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
-      slideCards({ selectedIndex: nextSelectedIndex });
-    } else {
-      // Next card.
-      const nextSelectedIndex = Math.min(
-        STATE.CARDS.length - 1,
-        STATE.SELECTED_INDEX + 1
-      );
-      slideCards({ selectedIndex: nextSelectedIndex });
-    }
+    // if (e.deltaX < 0) {
+    //   // previous card.
+    //   const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
+    //   slideCards({ selectedIndex: nextSelectedIndex });
+    // } else {
+    //   // Next card.
+    //   const nextSelectedIndex = Math.min(
+    //     STATE.CARDS.length - 1,
+    //     STATE.SELECTED_INDEX + 1
+    //   );
+    //   slideCards({ selectedIndex: nextSelectedIndex });
+    // }
   }
 };
 
@@ -206,6 +209,7 @@ function Slider() {
   const [hideSlider, setHideSlider] = useState(false);
   const cardContainer = useRef();
   const [zoomedOut, setZoomedOut] = useState(false);
+  const [, setScrollDisabled] = usePreventScroll(true);
 
   const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
@@ -215,32 +219,46 @@ function Slider() {
       await preloadImages(cardsArr);
       setPreloading(false);
       setHideSlider(true);
-      // setImageSource(cardsArr);
       setOptions(cardsArr);
       await initiate();
       setHideSlider(false);
+      setScrollDisabled(true);
       console.log('React inited');
     };
     init();
-  }, [setOptions]);
+  }, [setOptions, setScrollDisabled]);
 
   useEffect(() => {
     const el = cardContainer.current;
     el.addEventListener(
       'wheel',
-      _.debounce((e) => handleGestures(e, setZoomedOut), 1000, {
-        leading: true,
-        trailing: false,
-      })
+      _.debounce(
+        (e) => {
+          e.preventDefault();
+          handleGestures(e, setZoomedOut);
+        },
+        100,
+        {
+          leading: true,
+          trailing: false,
+        }
+      )
     );
     window.addEventListener('click', handleClick);
     return () => {
       el.removeEventListener(
         'wheel',
-        _.debounce((e) => handleGestures(e, setZoomedOut), 1000, {
-          leading: true,
-          trailing: false,
-        })
+        _.debounce(
+          (e) => {
+            e.preventDefault();
+            handleGestures(e, setZoomedOut);
+          },
+          100,
+          {
+            leading: true,
+            trailing: false,
+          }
+        )
       );
       window.removeEventListener('click', handleClick);
     };
