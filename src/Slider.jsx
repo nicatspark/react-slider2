@@ -63,14 +63,6 @@ const resetCardsPos = () => {
   SET({ CARD_CENTER_OFFSET });
 };
 
-const handleClick = async (e) => {
-  const selectedCard = e.target.closest('.card-section');
-  if (!selectedCard) return;
-  const { index: nextIndex } = selectedCard.dataset;
-  await slideCards({ nextIndex });
-  console.log('Card click done');
-};
-
 const slideCards = ({ nextIndex }) => {
   console.assert(
     !isNaN(nextIndex) && nextIndex >= 0,
@@ -200,7 +192,7 @@ const handleGestures = (e, setZoomedOut) => {
   if (pinchDetected(e)) {
     setZoomedOut(isZoomIn(e.deltaY));
   } else {
-    console.log(!horisontalSwipeDetected(e), cardsAlreadyInMotion());
+    // console.log(!horisontalSwipeDetected(e), cardsAlreadyInMotion());
     if (!horisontalSwipeDetected(e) || cardsAlreadyInMotion()) return;
     console.log('PAN', e.deltaX);
     if (e.deltaX < 0) {
@@ -229,6 +221,13 @@ function Slider() {
 
   const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
+  const handleClick = async (e) => {
+    const selectedCard = e.target.closest('.card-section');
+    if (!selectedCard) return;
+    const { index: nextIndex } = selectedCard.dataset;
+    return slideCards({ nextIndex });
+  };
+
   useEffect(() => {
     const init = async () => {
       const cardsArr = await fetchApi();
@@ -254,7 +253,11 @@ function Slider() {
         trailing: false,
       })
     );
-    window.addEventListener('click', handleClick);
+    window.addEventListener('click', clickActions);
+    async function clickActions(e) {
+      if (zoomedOut) setZoomedOut(false);
+      await handleClick(e);
+    }
     return () => {
       el.removeEventListener(
         'wheel',
@@ -263,7 +266,7 @@ function Slider() {
           trailing: false,
         })
       );
-      window.removeEventListener('click', handleClick);
+      window.removeEventListener('click', clickActions);
     };
   }, [zoomedOut]);
 
