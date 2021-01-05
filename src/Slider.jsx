@@ -7,6 +7,15 @@ import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
 import _ from 'lodash';
 
+/* TODO
+- Make zoom to a boolean setting.
+- Make show unselected images a boolean setting.
+- Create overscroll animation on slide endpoints. DONE
+- Create fixed image with masked corresponding image underneath if possible.
+Nice to have:
+- Alternative CSS transition scroll.
+*/
+
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
   CARD_GAP: { current: 100, unit: 'px', css: true },
@@ -83,7 +92,7 @@ const slideCards = ({ nextIndex }) => {
         )
       : 0;
   const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
-  //
+  // Skip motionblur on anything else than chromium.
   const isChrome =
     !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
   const isEdgeChromium = isChrome && navigator.userAgent.indexOf('Edg') !== -1;
@@ -128,7 +137,7 @@ const stateGuiMediator = () => {
   const documentRoot = document.documentElement;
   const cardContainer = document.querySelector('.card-container');
   // Micro state helper functions.
-  const { ADD, SET, STATE, SET_COMPLEX } = microState();
+  const { ADD, SET, STATE, SET_COMPLEX, REMOVE } = microState();
   return {
     cardsCollection,
     cardsWrapper,
@@ -139,6 +148,7 @@ const stateGuiMediator = () => {
     SET,
     STATE,
     SET_COMPLEX,
+    REMOVE,
   };
 };
 
@@ -182,7 +192,7 @@ const setCardsToMicroState = (cards) => {
 
 const handleGestures = (e, setZoomedOut) => {
   e.preventDefault();
-  const { STATE } = stateGuiMediator();
+  const { cardsWrapper, STATE, SET, REMOVE } = stateGuiMediator();
   const pinchDetected = (e) => e.ctrlKey;
   const isZoomIn = (deltaY) => !!Math.max(0, deltaY);
   const cardsAlreadyInMotion = () => !!Math.abs(STATE.CARDS_MOVING);
@@ -198,14 +208,64 @@ const handleGestures = (e, setZoomedOut) => {
     if (e.deltaX < 0) {
       // previous card.
       const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
-      slideCards({ nextIndex: nextSelectedIndex });
+      const isOverscrollLeft = STATE.SELECTED_INDEX - 1 < 0;
+      if (isOverscrollLeft) overScrollAnim(1);
+      else slideCards({ nextIndex: nextSelectedIndex });
     } else {
       // Next card.
+      const isOverscrollRight =
+        STATE.CARDS.length - 1 < STATE.SELECTED_INDEX + 1;
       const nextSelectedIndex = Math.min(
         STATE.CARDS.length - 1,
         STATE.SELECTED_INDEX + 1
       );
-      slideCards({ nextIndex: nextSelectedIndex });
+      if (isOverscrollRight) overScrollAnim(-1);
+      else slideCards({ nextIndex: nextSelectedIndex });
+    }
+    async function overScrollAnim(dir) {
+      if (debounce()) return;
+      const overScrollDist = -20;
+      // eslint-disable-next-line
+      const regexParentesisContent = /\(([^\)]*)\)/;
+      const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
+      const startValue =
+        window.getComputedStyle(cardsWrapper).transform !== 'none'
+          ? Math.round(
+              cardsWrapperStyles.transform
+                .match(regexParentesisContent)[1]
+                .split(',')[4]
+            )
+          : 0;
+      await motionBlur(cardsWrapper, {
+        durationMs: 150,
+        properties: [
+          {
+            property: 'transform',
+            start: `translateX(${startValue}px)`,
+            end: `translateX(${startValue - overScrollDist * dir}px)`,
+          },
+        ],
+        easing: 'easeOutQuad',
+      });
+      motionBlur(cardsWrapper, {
+        durationMs: 350,
+        properties: [
+          {
+            property: 'transform',
+            start: `translateX(${startValue - overScrollDist * dir}px)`,
+            end: `translateX(${startValue}px)`,
+          },
+        ],
+        easing: 'easeInQuad',
+      });
+      function debounce() {
+        if (STATE.TEMP_OVERSCROLL_PREVENTER) return true;
+        SET({ TEMP_OVERSCROLL_PREVENTER: true });
+        setTimeout(() => {
+          REMOVE({ TEMP_OVERSCROLL_PREVENTER: null });
+        }, 1000);
+        return false;
+      }
     }
   }
 };

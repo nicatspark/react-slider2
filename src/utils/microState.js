@@ -27,6 +27,13 @@ const microState = () => {
       window.global = { ...window.global, ...tempKeyVal };
     });
   };
+  const REMOVE = (keyToDeleteObj) => {
+    const temp = { ...store };
+    Object.keys(keyToDeleteObj).forEach((key) => {
+      delete temp[key];
+    });
+    window.global = { ...temp };
+  };
   const ADD = (keyValueObj) =>
     !_stateKeyExist(keyValueObj)
       ? SET(keyValueObj)
@@ -50,6 +57,7 @@ const microState = () => {
     ADD,
     SET,
     SET_COMPLEX,
+    REMOVE,
     _cssCustomPropRoot,
   };
 };
