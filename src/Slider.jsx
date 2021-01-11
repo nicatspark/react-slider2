@@ -7,7 +7,8 @@ import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
 // import _ from 'lodash';
 import clsx from 'clsx';
-import { usePinch } from 'react-use-gesture';
+import { usePinch, useGesture } from 'react-use-gesture';
+import { useSpring, animated } from 'react-spring';
 
 /* TODO
 - Test the 'touchmove' event for iphone.
@@ -136,7 +137,7 @@ const slideCards = ({ nextIndex }) => {
 const stateGuiMediator = () => {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
-  const firstImage = cardsCollection[0].querySelector('img');
+  const firstImage = cardsCollection[0]?.querySelector('img');
   const documentRoot = document.documentElement;
   const cardContainer = document.querySelector('.card-container');
   const zoomBtn = document.querySelector('.zoom-toggle');
@@ -197,90 +198,99 @@ const setCardsToMicroState = (cards) => {
   SET_COMPLEX({ CARDS: cards });
 };
 
-const handleGestures = (e, setZoomedOut) => {
-  e.preventDefault();
-  const { cardsWrapper, STATE, SET, REMOVE } = stateGuiMediator();
-  const pinchDetected = (e) => e.ctrlKey;
-  const isZoomIn = (deltaY) => !!Math.max(0, deltaY);
-  const cardsAlreadyInMotion = () => !!Math.abs(STATE.CARDS_MOVING);
-  const horisontalSwipeDetected = (e) =>
-    Math.abs(e.deltaX) && Math.abs(e.deltaX) > Math.abs(e.deltaY);
-  //
-  if (pinchDetected(e)) {
-    setZoomedOut(isZoomIn(e.deltaY));
-  } else {
-    // console.log(!horisontalSwipeDetected(e), cardsAlreadyInMotion());
-    if (!horisontalSwipeDetected(e) || cardsAlreadyInMotion()) return;
-    console.log('PAN', e.deltaX);
-    if (e.deltaX < 0) {
-      // previous card.
-      const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
-      const isOverscrollLeft = STATE.SELECTED_INDEX - 1 < 0;
-      if (isOverscrollLeft) overScrollAnim(1);
-      else slideCards({ nextIndex: nextSelectedIndex });
-    } else {
-      // Next card.
-      const isOverscrollRight =
-        STATE.CARDS.length - 1 < STATE.SELECTED_INDEX + 1;
-      const nextSelectedIndex = Math.min(
-        STATE.CARDS.length - 1,
-        STATE.SELECTED_INDEX + 1
-      );
-      if (isOverscrollRight) overScrollAnim(-1);
-      else slideCards({ nextIndex: nextSelectedIndex });
-    }
-    async function overScrollAnim(dir) {
-      if (debounce()) return;
-      const overScrollDist = -40;
-      // eslint-disable-next-line
-      const regexParentesisContent = /\(([^\)]*)\)/;
-      const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
-      const startValue =
-        window.getComputedStyle(cardsWrapper).transform !== 'none'
-          ? Math.round(
-              cardsWrapperStyles.transform
-                .match(regexParentesisContent)[1]
-                .split(',')[4]
-            )
-          : 0;
-      await motionBlur(cardsWrapper, {
-        durationMs: 100,
-        properties: [
-          {
-            property: 'transform',
-            start: `translateX(${startValue}px)`,
-            end: `translateX(${startValue - overScrollDist * dir}px)`,
-          },
-        ],
-        easing: 'easeOutQuad',
-      });
-      motionBlur(cardsWrapper, {
-        durationMs: 250,
-        properties: [
-          {
-            property: 'transform',
-            start: `translateX(${startValue - overScrollDist * dir}px)`,
-            end: `translateX(${startValue}px)`,
-          },
-        ],
-        easing: 'easeInQuad',
-      });
-      function debounce() {
-        if (STATE.TEMP_OVERSCROLL_PREVENTER) return true;
-        SET({ TEMP_OVERSCROLL_PREVENTER: true });
-        setTimeout(() => {
-          REMOVE({ TEMP_OVERSCROLL_PREVENTER: null });
-        }, 1000);
-        return false;
-      }
-    }
-  }
-};
+// const handleGestures = (e, setZoomedOut) => {
+//   e.preventDefault();
+//   const { cardsWrapper, STATE, SET, REMOVE } = stateGuiMediator();
+//   const pinchDetected = (e) => e.ctrlKey;
+//   const isZoomIn = (deltaY) => !!Math.max(0, deltaY);
+//   const cardsAlreadyInMotion = () => !!Math.abs(STATE.CARDS_MOVING);
+//   const horisontalSwipeDetected = (e) =>
+//     Math.abs(e.deltaX) && Math.abs(e.deltaX) > Math.abs(e.deltaY);
+//   //
+//   if (pinchDetected(e)) {
+//     setZoomedOut(isZoomIn(e.deltaY));
+//   } else {
+//     // console.log(!horisontalSwipeDetected(e), cardsAlreadyInMotion());
+//     if (!horisontalSwipeDetected(e) || cardsAlreadyInMotion()) return;
+//     console.log('PAN', e.deltaX);
+//     if (e.deltaX < 0) {
+//       // previous card.
+//       const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
+//       const isOverscrollLeft = STATE.SELECTED_INDEX - 1 < 0;
+//       if (isOverscrollLeft) overScrollAnim(1);
+//       else slideCards({ nextIndex: nextSelectedIndex });
+//     } else {
+//       // Next card.
+//       const isOverscrollRight =
+//         STATE.CARDS.length - 1 < STATE.SELECTED_INDEX + 1;
+//       const nextSelectedIndex = Math.min(
+//         STATE.CARDS.length - 1,
+//         STATE.SELECTED_INDEX + 1
+//       );
+//       if (isOverscrollRight) overScrollAnim(-1);
+//       else slideCards({ nextIndex: nextSelectedIndex });
+//     }
+//     async function overScrollAnim(dir) {
+//       if (debounce()) return;
+//       const overScrollDist = -40;
+//       // eslint-disable-next-line
+//       const regexParentesisContent = /\(([^\)]*)\)/;
+//       const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
+//       const startValue =
+//         window.getComputedStyle(cardsWrapper).transform !== 'none'
+//           ? Math.round(
+//               cardsWrapperStyles.transform
+//                 .match(regexParentesisContent)[1]
+//                 .split(',')[4]
+//             )
+//           : 0;
+//       await motionBlur(cardsWrapper, {
+//         durationMs: 100,
+//         properties: [
+//           {
+//             property: 'transform',
+//             start: `translateX(${startValue}px)`,
+//             end: `translateX(${startValue - overScrollDist * dir}px)`,
+//           },
+//         ],
+//         easing: 'easeOutQuad',
+//       });
+//       motionBlur(cardsWrapper, {
+//         durationMs: 250,
+//         properties: [
+//           {
+//             property: 'transform',
+//             start: `translateX(${startValue - overScrollDist * dir}px)`,
+//             end: `translateX(${startValue}px)`,
+//           },
+//         ],
+//         easing: 'easeInQuad',
+//       });
+//       function debounce() {
+//         if (STATE.TEMP_OVERSCROLL_PREVENTER) return true;
+//         SET({ TEMP_OVERSCROLL_PREVENTER: true });
+//         setTimeout(() => {
+//           REMOVE({ TEMP_OVERSCROLL_PREVENTER: null });
+//         }, 1000);
+//         return false;
+//       }
+//     }
+//   }
+// };
 
 const doOnPinch = (state, setZoomedOut) => {
   if (state.pinching) {
     setZoomedOut(state.vdva[0] < 0 ? true : false);
   }
+};
+
+const wheel = (x) => {
+  const { STATE } = stateGuiMediator();
+  const { CARD_SCROLL_DISTANCE, CARDS } = STATE;
+  const scrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
+  const clampNumber = (num, max, min) =>
+    Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
+  return `translateX(${clampNumber(x, scrollDistance, 0) * -1}px`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
 };
 
 // Prevent accesability zoom in safari/iphone.
@@ -300,6 +310,17 @@ function Slider() {
     domTarget,
     eventOptions: { passive: false },
   });
+
+  const [{ wheelX }, setWheel] = useSpring(() => ({ wheelX: 0 }));
+  useGesture(
+    {
+      onWheel: ({ offset: [x] }) => {
+        console.log('offset', x);
+        setWheel({ wheelX: x });
+      },
+    },
+    { domTarget, eventOptions: { passive: false } }
+  );
 
   const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
@@ -397,7 +418,10 @@ function Slider() {
   return (
     <div ref={domTarget} style={{ width: '100%', height: '100%' }}>
       <section ref={cardContainer} className={cardContainerStyles}>
-        <div className={`card-wrapper${hideSlider ? ' transparent' : ''}`}>
+        <animated.div
+          style={{ transform: wheelX.to(wheel) }}
+          className={`card-wrapper${hideSlider ? ' transparent' : ''}`}
+        >
           {!preloading ? (
             options.map((o, i) => (
               <div key={i} className="card-section center" data-index={i}>
@@ -422,7 +446,7 @@ function Slider() {
               <div className="paragraph animated-background">&nbsp;</div>
             </div>
           )}
-        </div>
+        </animated.div>
         <Portal>
           <BtnToggle
             toggleZoomInOut={toggleZoomInOut}
