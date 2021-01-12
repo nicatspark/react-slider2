@@ -270,6 +270,9 @@ const handleGestures = (e, setZoomedOut) => {
   }
 };
 
+document.addEventListener('gesturestart', (e) => e.preventDefault());
+document.addEventListener('gesturechange', (e) => e.preventDefault());
+
 function Slider() {
   console.log('rendered');
   const [options, setOptions] = useState([]);
