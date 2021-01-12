@@ -3,18 +3,16 @@ import './App.scss';
 import Slider from './Slider';
 
 function App() {
-
   return (
     <div className="App">
       <div className="pancake-grid">
         <header>
           <h1>Configurator</h1>
         </header>
-        <article>
+        <div className="content-frame">
           <Slider />
-        </article>
+        </div>
       </div>
-      
     </div>
   );
 }

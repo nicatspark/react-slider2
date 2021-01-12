@@ -136,7 +136,7 @@ const slideCards = ({ nextIndex }) => {
 
 const stateGuiMediator = () => {
   const cardsCollection = document.querySelectorAll('.card-section');
-  const cardsWrapper = cardsCollection[0] && cardsCollection[0].parentElement;
+  const cardsWrapper = cardsCollection[0]?.parentElement;
   const firstImage = cardsCollection[0]?.querySelector('img');
   const documentRoot = document.documentElement;
   const cardContainer = document.querySelector('.card-container');
@@ -433,7 +433,7 @@ function Slider() {
 
   return (
     <div ref={domTarget} style={{ width: '100%', height: '100%' }}>
-      <section ref={cardContainer} className={cardContainerStyles}>
+      <div ref={cardContainer} className={cardContainerStyles}>
         <animated.div
           style={{
             transform: wheelX.to(wheel),
@@ -466,9 +466,7 @@ function Slider() {
             </div>
           )}
         </animated.div>
-        {/* <Portal> */}
-        {/* </Portal> */}
-      </section>
+      </div>
       <BtnToggle
         toggleZoomInOut={toggleZoomInOut}
         zoomedOut={zoomedOut}
