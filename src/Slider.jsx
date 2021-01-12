@@ -285,12 +285,29 @@ const doOnPinch = (state, setZoomedOut) => {
 };
 
 const wheel = (x) => {
+  // TODO: as long as finger is down return x and transition off.
   const { STATE } = stateGuiMediator();
   const { CARD_SCROLL_DISTANCE, CARDS } = STATE;
-  const scrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
+  if (!CARDS.length) return 0;
+  const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
+  const maxScrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
   const clampNumber = (num, max, min) =>
     Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
-  return `translateX(${clampNumber(x, scrollDistance, 0) * -1}px`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
+  const xpos = snapToCardPos(x, snapValues_arr);
+  const clamped_xpos = clampNumber(xpos, maxScrollDistance, 0);
+  return `translateX(${clamped_xpos * -1}px`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
+
+  function snapToCardPos(x, snapValues) {
+    const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
+      Math.abs(v1 - v2) < epsilon;
+    let nearValue = x;
+    snapValues.forEach((snapPos) => {
+      if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
+        nearValue = snapPos;
+      }
+    });
+    return nearValue;
+  }
 };
 
 // Prevent accesability zoom in safari/iphone.
@@ -315,7 +332,6 @@ function Slider() {
   useGesture(
     {
       onWheel: ({ offset: [x] }) => {
-        console.log('offset', x);
         setWheel({ wheelX: x });
       },
     },
@@ -419,7 +435,10 @@ function Slider() {
     <div ref={domTarget} style={{ width: '100%', height: '100%' }}>
       <section ref={cardContainer} className={cardContainerStyles}>
         <animated.div
-          style={{ transform: wheelX.to(wheel) }}
+          style={{
+            transform: wheelX.to(wheel),
+            transition: 'transform 600ms ease-out',
+          }}
           className={`card-wrapper${hideSlider ? ' transparent' : ''}`}
         >
           {!preloading ? (
