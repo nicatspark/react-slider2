@@ -1,18 +1,21 @@
-import { useState } from 'react';
+import { React } from 'react';
 import styled from 'styled-components';
+import { useSpring, animated } from 'react-spring';
 
-const ZoomToggle = styled.div`
+const ZoomToggle = styled(animated.div)`
   --size: 7em;
   position: fixed;
+  z-index: 1000;
   left: calc(var(--size) / -2);
   bottom: calc(var(--size) / -2);
   background-color: black;
   width: var(--size);
   height: var(--size);
   border-radius: 50%;
-  transition: transform 500ms ease-in-out;
+  /* transition: transform 500ms ease-in-out; */
   transform: rotate(0deg);
   transform-origin: center center;
+  cursor: pointer;
   cursor: pointer;
   &.active {
     transform: rotate(-90deg);
@@ -43,21 +46,23 @@ const ZoomToggle = styled.div`
 `;
 ZoomToggle.displayName = 'BtnToggle';
 
-export default function BtnToggle({ toggleZoomInOut }) {
-  const [active, setActive] = useState(false);
+const BtnToggle = ({ toggleZoomInOut, zoomedOut }) => {
+  // const [active, setActive] = useState(false);
+  const props = useSpring({
+    transform: zoomedOut ? 'rotate(-90deg)' : 'rotate(0deg)',
+  });
 
   function toggle() {
     toggleZoomInOut();
-    setActive(!active);
+    // setActive(!active);
   }
 
   return (
-    <ZoomToggle
-      className={`zoom-toggle ${active ? 'active' : ''}`}
-      onClick={() => toggle()}
-    >
+    <ZoomToggle className="zoom-toggle" onClick={() => toggle()} style={props}>
       <i className="fas fa-search-minus"></i>
       <i className="fas fa-search-plus"></i>
     </ZoomToggle>
   );
-}
+};
+
+export default BtnToggle;

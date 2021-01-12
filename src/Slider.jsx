@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from 'react';
 import BtnToggle from './BtnToggle.jsx';
 import usePreventScroll from './utils/usePreventScroll';
-import Portal from './Portal';
+// import Portal from './Portal';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
@@ -466,13 +466,13 @@ function Slider() {
             </div>
           )}
         </animated.div>
-        <Portal>
-          <BtnToggle
-            toggleZoomInOut={toggleZoomInOut}
-            zoomedOut={zoomedOut}
-          ></BtnToggle>
-        </Portal>
+        {/* <Portal> */}
+        {/* </Portal> */}
       </section>
+      <BtnToggle
+        toggleZoomInOut={toggleZoomInOut}
+        zoomedOut={zoomedOut}
+      ></BtnToggle>
     </div>
   );
 }
