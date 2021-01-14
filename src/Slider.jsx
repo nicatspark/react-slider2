@@ -5,6 +5,7 @@ import usePreventScroll from './utils/usePreventScroll';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
+import expoSlide from './utils/expoSlide';
 // import _ from 'lodash';
 import clsx from 'clsx';
 import { usePinch, useGesture } from 'react-use-gesture';
@@ -30,6 +31,7 @@ window.global = Object.freeze({
   SELECTED_INDEX: { current: 0, unit: '', css: false },
   CARDS_MOVING: { current: 0, unit: '', css: false },
   CARDS: { current: [], unit: '', css: false },
+  SCROLL_POS: { current: 0, unit: '', css: false },
 });
 
 async function initiate() {
@@ -285,34 +287,39 @@ const doOnPinch = (state, setZoomedOut) => {
 };
 
 const wheel = (x) => {
-  // TODO: as long as finger is down return x and transition off.
-  const { STATE } = stateGuiMediator();
+  const { SET, STATE, cardsWrapper } = stateGuiMediator();
   const { CARD_SCROLL_DISTANCE, CARDS } = STATE;
-  if (!CARDS.length) return 0;
-  const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
+  if (!CARDS.length || !cardsWrapper) return 0;
   const maxScrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
   const clampNumber = (num, max, min) =>
     Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
-  const xpos = snapToCardPos(x, snapValues_arr);
+  const xpos = x;
+  SET({ SCROLL_POS: x });
   const clamped_xpos = clampNumber(xpos, maxScrollDistance, 0);
-  return `translateX(${clamped_xpos * -1}px`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
-
-  function snapToCardPos(x, snapValues) {
-    const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
-      Math.abs(v1 - v2) < epsilon;
-    let nearValue = x;
-    snapValues.forEach((snapPos) => {
-      if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
-        nearValue = snapPos;
-      }
-    });
-    return nearValue;
-  }
+  return `translateX(${clamped_xpos * -1}px)`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
 };
 
 // Prevent accesability zoom in safari/iphone.
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('gesturechange', (e) => e.preventDefault());
+// let el;
+// const preventHistoryBack = (e) => {
+//   var delta = e.deltaX || e.wheelDeltaX;
+//   if (!delta) return;
+//   window.WebKitMediaKeyError /*detect safari*/ && (delta *= -1);
+//   if (
+//     (el.scrollLeft + el.offsetWidth === el.scrollWidth && delta > 0) ||
+//     (el.scrollLeft === 0 && delta < 0)
+//   ) {
+//     e.preventDefault();
+//     console.log('preventing');
+//   }
+// };
+// window.onload = () => {
+//   el = document.querySelector('.pancake-grid');
+//   el.addEventListener('mousewheel', preventHistoryBack, false);
+//   el.addEventListener('wheel', preventHistoryBack, false);
+// };
 
 function Slider() {
   console.log('rendered');
@@ -331,8 +338,53 @@ function Slider() {
   const [{ wheelX }, setWheel] = useSpring(() => ({ wheelX: 0 }));
   useGesture(
     {
-      onWheel: ({ offset: [x] }) => {
-        setWheel({ wheelX: x });
+      onWheel: (state) => {
+        // { offset: [x], wheeling }
+        const {
+          offset: [x],
+          wheeling,
+          event,
+        } = state;
+        event.preventDefault();
+        event.stopPropagation();
+        const snapDurationMS = 400;
+        const { SET, STATE, REMOVE } = stateGuiMediator();
+        const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
+        if (wheeling) SET({ TEMP_WHEELING: true });
+        else REMOVE({ TEMP_WHEELING: null });
+
+        if (wheeling) setWheel({ wheelX: x });
+        else {
+          if (window.doOnce) return;
+          window.doOnce = true;
+          setTimeout(() => delete window.doOnce, snapDurationMS);
+          const snapValues_arr = CARDS.map(
+            (card, i) => CARD_SCROLL_DISTANCE * i
+          );
+          const target_x = snapToCardPos(SCROLL_POS, snapValues_arr);
+          const targetDistance = target_x - SCROLL_POS;
+          expoSlide({
+            durationMs: snapDurationMS,
+            targetDistance,
+            fnToRun: function (x) {
+              setWheel({ wheelX: SCROLL_POS + x });
+            },
+          }).then(() => {
+            console.log('done');
+          });
+        }
+
+        function snapToCardPos(x, snapValues_arr) {
+          const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
+            Math.abs(v1 - v2) < epsilon;
+          let nearValue = x;
+          snapValues_arr.forEach((snapPos) => {
+            if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
+              nearValue = snapPos;
+            }
+          });
+          return nearValue;
+        }
       },
     },
     { domTarget, eventOptions: { passive: false } }
@@ -437,7 +489,7 @@ function Slider() {
         <animated.div
           style={{
             transform: wheelX.to(wheel),
-            transition: 'transform 600ms ease-out',
+            // transition: 'transform 600ms ease-out',
           }}
           className={`card-wrapper${hideSlider ? ' transparent' : ''}`}
         >
