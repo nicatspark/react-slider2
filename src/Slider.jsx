@@ -321,6 +321,53 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 //   el.addEventListener('wheel', preventHistoryBack, false);
 // };
 
+const onWheelFn = (state, setWheel) => {
+  // { offset: [x], wheeling }
+  const {
+    offset: [x],
+    wheeling,
+    event,
+  } = state;
+  event.preventDefault();
+  event.stopPropagation();
+  const snapDurationMS = 400;
+  const { SET, STATE, REMOVE } = stateGuiMediator();
+  const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
+  if (wheeling) SET({ TEMP_WHEELING: true });
+  else REMOVE({ TEMP_WHEELING: null });
+
+  if (wheeling) setWheel({ wheelX: x });
+  else {
+    if (window.doOnce) return;
+    window.doOnce = true;
+    setTimeout(() => delete window.doOnce, snapDurationMS);
+    const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
+    const target_x = snapToCardPos(SCROLL_POS, snapValues_arr);
+    const targetDistance = target_x - SCROLL_POS;
+    expoSlide({
+      durationMs: snapDurationMS,
+      targetDistance,
+      fnToRun: function (x) {
+        setWheel({ wheelX: SCROLL_POS + x });
+      },
+    }).then(() => {
+      console.log('done');
+    });
+  }
+
+  function snapToCardPos(x, snapValues_arr) {
+    const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
+      Math.abs(v1 - v2) < epsilon;
+    let nearValue = x;
+    snapValues_arr.forEach((snapPos) => {
+      if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
+        nearValue = snapPos;
+      }
+    });
+    return nearValue;
+  }
+};
+
 function Slider() {
   console.log('rendered');
   const domTarget = useRef(null);
@@ -338,54 +385,7 @@ function Slider() {
   const [{ wheelX }, setWheel] = useSpring(() => ({ wheelX: 0 }));
   useGesture(
     {
-      onWheel: (state) => {
-        // { offset: [x], wheeling }
-        const {
-          offset: [x],
-          wheeling,
-          event,
-        } = state;
-        event.preventDefault();
-        event.stopPropagation();
-        const snapDurationMS = 400;
-        const { SET, STATE, REMOVE } = stateGuiMediator();
-        const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
-        if (wheeling) SET({ TEMP_WHEELING: true });
-        else REMOVE({ TEMP_WHEELING: null });
-
-        if (wheeling) setWheel({ wheelX: x });
-        else {
-          if (window.doOnce) return;
-          window.doOnce = true;
-          setTimeout(() => delete window.doOnce, snapDurationMS);
-          const snapValues_arr = CARDS.map(
-            (card, i) => CARD_SCROLL_DISTANCE * i
-          );
-          const target_x = snapToCardPos(SCROLL_POS, snapValues_arr);
-          const targetDistance = target_x - SCROLL_POS;
-          expoSlide({
-            durationMs: snapDurationMS,
-            targetDistance,
-            fnToRun: function (x) {
-              setWheel({ wheelX: SCROLL_POS + x });
-            },
-          }).then(() => {
-            console.log('done');
-          });
-        }
-
-        function snapToCardPos(x, snapValues_arr) {
-          const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
-            Math.abs(v1 - v2) < epsilon;
-          let nearValue = x;
-          snapValues_arr.forEach((snapPos) => {
-            if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
-              nearValue = snapPos;
-            }
-          });
-          return nearValue;
-        }
-      },
+      onWheel: (state) => onWheelFn(state, setWheel),
     },
     { domTarget, eventOptions: { passive: false } }
   );
