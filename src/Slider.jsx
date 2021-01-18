@@ -290,12 +290,14 @@ const wheel = (x) => {
   const { SET, STATE, cardsWrapper } = stateGuiMediator();
   const { CARD_SCROLL_DISTANCE, CARDS } = STATE;
   if (!CARDS.length || !cardsWrapper) return 0;
+  console.log('x-diff:', Math.round(window.temp - x));
   const maxScrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
   const clampNumber = (num, max, min) =>
     Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
-  const xpos = x;
-  SET({ SCROLL_POS: x });
+  const xpos = STATE.SCROLL_POS + x - (window.temp || 0);
+  window.temp = x;
   const clamped_xpos = clampNumber(xpos, maxScrollDistance, 0);
+  SET({ SCROLL_POS: clamped_xpos });
   return `translateX(${clamped_xpos * -1}px)`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
 };
 
@@ -328,8 +330,8 @@ const onWheelFn = (state, setWheel) => {
     wheeling,
     event,
   } = state;
+  // console.log('movement[0], x', Math.round(movement[0] / 15), window.temp - x);
   event.preventDefault();
-  event.stopPropagation();
   const snapDurationMS = 400;
   const { SET, STATE, REMOVE } = stateGuiMediator();
   const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
@@ -338,9 +340,9 @@ const onWheelFn = (state, setWheel) => {
 
   if (wheeling) setWheel({ wheelX: x });
   else {
-    if (window.doOnce) return;
-    window.doOnce = true;
-    setTimeout(() => delete window.doOnce, snapDurationMS);
+    if (STATE.DO_ONCE) return;
+    SET({ DO_ONCE: true });
+    setTimeout(() => REMOVE({ DO_ONCE: null }), snapDurationMS);
     const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
     const target_x = snapToCardPos(SCROLL_POS, snapValues_arr);
     const targetDistance = target_x - SCROLL_POS;
