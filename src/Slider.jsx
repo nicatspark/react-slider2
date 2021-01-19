@@ -152,30 +152,32 @@ const stateGuiMediator = () => {
   };
 };
 
+const test = process.env;
+console.log('test', test);
 const fetchApi = () => {
   // const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
-    const tempUrl = 'https://source.unsplash.com/random/500x500';
+    // const tempUrl = 'https://source.unsplash.com/random/500x500';
     const cardsArr = [
       {
         header: 'header1',
-        imageUrl: tempUrl,
+        imageUrl: '/images/00042_G.png',
       },
       {
         header: 'header2',
-        imageUrl: tempUrl,
+        imageUrl: '/images/00042_H.png',
       },
       {
         header: 'header3',
-        imageUrl: tempUrl,
+        imageUrl: '/images/00042_J.png',
       },
       {
         header: 'header4',
-        imageUrl: tempUrl,
+        imageUrl: '/images/00042_L.png',
       },
       {
         header: 'header5',
-        imageUrl: tempUrl,
+        imageUrl: '/images/00042_S.png',
       },
     ];
     setTimeout(() => {
