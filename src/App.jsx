@@ -1,6 +1,19 @@
 import React from 'react';
 import './App.scss';
 import Slider from './Slider';
+import styled from 'styled-components';
+
+const Log = styled.div`
+  position: fixed;
+  background: white;
+  width: 100vw;
+  height: 100px;
+  overflow-x: auto;
+  overflow-y: scroll;
+  top: 0;
+  left: 0;
+  font-size: 0.7rem;
+`;
 
 function App() {
   return (
@@ -13,6 +26,7 @@ function App() {
           <Slider />
         </div>
       </div>
+      <Log className="log"></Log>
     </div>
   );
 }

@@ -8,7 +8,7 @@ import preloadImages from './utils/preloadImages';
 import expoSlide from './utils/expoSlide';
 // import _ from 'lodash';
 import clsx from 'clsx';
-import { usePinch, useGesture } from 'react-use-gesture';
+import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
 
 /* TODO
@@ -20,6 +20,11 @@ import { usePinch, useGesture } from 'react-use-gesture';
 Nice to have:
 - Alternative CSS transition scroll.
 */
+
+const log = (x) => {
+  const el = document.querySelector('.log');
+  el.innerHTML = JSON.stringify(x) + '<br>' + el.innerHTML;
+};
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -329,6 +334,7 @@ const onWheelFn = (state) => {
     // offset: [x],
     delta,
     wheeling,
+    dragging,
     event,
   } = state;
   // console.log('movement[0], x', Math.round(movement[0] / 15), window.temp - x);
@@ -338,8 +344,9 @@ const onWheelFn = (state) => {
   const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
   const x = delta[0];
   console.log(x, wheeling);
+  log(dragging);
   const xpos = SCROLL_POS - x;
-  if (wheeling) moveTo(xpos);
+  if (wheeling || dragging) moveTo(xpos);
   else {
     const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
     const target_x = -snapToCardPos(-SCROLL_POS, snapValues_arr);
@@ -353,8 +360,8 @@ const onWheelFn = (state) => {
         console.log('x', x);
         moveTo(SCROLL_POS + x);
       },
-    }).then((x) => {
-      console.log('done', x);
+    }).then((lastx) => {
+      console.log('done', lastx);
     });
   }
 
@@ -366,27 +373,6 @@ const onWheelFn = (state) => {
     SET({ SCROLL_POS: clamped_xpos });
     cardsWrapper.style.transform = `translateX(${clamped_xpos}px)`;
   }
-  // if (wheeling) SET({ TEMP_WHEELING: true });
-  // else REMOVE({ TEMP_WHEELING: null });
-
-  // if (wheeling) setWheel({ wheelX: x });
-  // else {
-  //   if (STATE.DO_ONCE) return;
-  //   SET({ DO_ONCE: true });
-  //   setTimeout(() => REMOVE({ DO_ONCE: null }), snapDurationMS);
-  //   const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
-  //   const target_x = snapToCardPos(SCROLL_POS, snapValues_arr);
-  //   const targetDistance = target_x - SCROLL_POS;
-  //   expoSlide({
-  //     durationMs: snapDurationMS,
-  //     targetDistance,
-  //     fnToRun: function (x) {
-  //       setWheel({ wheelX: SCROLL_POS + x });
-  //     },
-  //   }).then(() => {
-  //     console.log('done');
-  //   });
-  // }
 
   function snapToCardPos(x, snapValues_arr) {
     const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
@@ -421,6 +407,13 @@ function Slider() {
     },
     { domTarget, eventOptions: { passive: false } }
   );
+  useDrag(
+    (state) => onWheelFn({ ...state, delta: state.delta.map((x) => x * -3) }),
+    {
+      domTarget,
+      eventOptions: { passive: false },
+    }
+  );
 
   const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
@@ -448,47 +441,6 @@ function Slider() {
   }, [setOptions, setScrollDisabled]);
 
   useEffect(() => {
-    // const el = cardContainer.current.parentElement;
-    // el.addEventListener(
-    //   'wheel',
-    //   _.throttle((e) => handleGestures(e, setZoomedOut), 250, {
-    //     leading: true,
-    //     trailing: false,
-    //   })
-    // );
-    // el.addEventListener(
-    //   'touchdown',
-    //   _.throttle((e) => console.log('touch down'), 250, {
-    //     leading: true,
-    //     trailing: false,
-    //   })
-    // );
-    // el.addEventListener(
-    //   'touchmove',
-    //   _.throttle(
-    //     (e) => {
-    //       // e = e.originalEvent || e;
-    //       console.log('e.deltaX', e);
-    //       // alert('touched deltaX: ' + e.deltaX);
-    //       const event = new WheelEvent('wheel', {
-    //         bubbles: true,
-    //         cancelable: true,
-    //         view: window,
-    //       });
-    //       window.dispatchEvent(event);
-    //       // const event = document.createEvent('HTMLEvents');
-    //       // event.initEvent('wheel', true, true);
-    //       // event.eventName = 'wheel';
-    //       // window.dispatchEvent(event);
-    //       // handleGestures(e, setZoomedOut);
-    //     },
-    //     800,
-    //     {
-    //       leading: true,
-    //       trailing: false,
-    //     }
-    //   )
-    // );
     window.addEventListener('click', clickActions);
     const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
     //
@@ -497,16 +449,6 @@ function Slider() {
       if (zoomedOut) setZoomedOut(false);
       await handleClick(e);
     }
-    return () => {
-      // el.removeEventListener(
-      //   'wheel',
-      //   _.throttle((e) => handleGestures(e, setZoomedOut), 250, {
-      //     leading: true,
-      //     trailing: false,
-      //   })
-      // );
-      // window.removeEventListener('click', clickActions);
-    };
   }, [zoomedOut]);
 
   const cardContainerStyles = clsx({
