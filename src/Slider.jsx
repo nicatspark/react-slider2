@@ -25,6 +25,8 @@ const log = (x) => {
   const el = document.querySelector('.log');
   el.innerHTML = JSON.stringify(x) + '<br>' + el.innerHTML;
 };
+const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
+  Math.abs(v1 - v2) < epsilon;
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -48,7 +50,7 @@ async function initiate() {
 }
 
 const adjustCardSpacing = () => {
-  const { SET } = stateGuiMediator();
+  const { SET, cardsCollection } = stateGuiMediator();
   return new Promise((resolve) => {
     const { firstImage, documentRoot } = stateGuiMediator();
     firstImage.addEventListener('load', _distributeCards);
@@ -70,6 +72,9 @@ const adjustCardSpacing = () => {
         CARD_GAP,
         CARD_SCROLL_DISTANCE,
         CARD_IMG_SPACING,
+      });
+      [...cardsCollection].forEach((card, i) => {
+        card.dataset.posx = Math.round(CARD_SCROLL_DISTANCE * i);
       });
       resolve();
     }
@@ -340,24 +345,30 @@ const onWheelFn = (state) => {
   // console.log('movement[0], x', Math.round(movement[0] / 15), window.temp - x);
   event.preventDefault();
   const snapDurationMS = 400;
-  const { SET, STATE, cardsWrapper } = stateGuiMediator();
-  const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
+  const { SET, STATE, cardsWrapper, cardsCollection } = stateGuiMediator();
+  const {
+    CARD_SCROLL_DISTANCE,
+    CARDS,
+    SCROLL_POS,
+    CARD_WIDTH,
+    IMG_WIDTH,
+  } = STATE;
   const x = delta[0];
-  console.log(x, wheeling);
+  // console.log(x, wheeling);
   log(dragging);
   const xpos = SCROLL_POS - x;
   if (wheeling || dragging) moveTo(xpos);
   else {
     const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
     const target_x = -snapToCardPos(-SCROLL_POS, snapValues_arr);
-    console.log('target_x', target_x, SCROLL_POS);
+    // console.log('target_x', target_x, SCROLL_POS);
     const targetDistance = target_x - SCROLL_POS;
-    console.log('targetDistance', targetDistance);
+    // console.log('targetDistance', targetDistance);
     expoSlide({
       durationMs: snapDurationMS,
       targetDistance,
       fnToRun: function (x) {
-        console.log('x', x);
+        // console.log('x', x);
         moveTo(SCROLL_POS + x);
       },
     }).then((lastx) => {
@@ -372,11 +383,34 @@ const onWheelFn = (state) => {
     const clamped_xpos = clampNumber(x, 0, -maxScrollDistance);
     SET({ SCROLL_POS: clamped_xpos });
     cardsWrapper.style.transform = `translateX(${clamped_xpos}px)`;
+    handleTranlucensy(-clamped_xpos);
+  }
+
+  function handleTranlucensy(clamped_xpos) {
+    const fadeMargin = 100;
+    const totalCardWidth = Math.max(CARD_WIDTH, IMG_WIDTH);
+    [...cardsCollection].forEach((card, i) => {
+      const cardPosition = card.dataset.posx;
+      const cardImg = card.querySelector('img');
+      if (
+        approximatelyEqual(
+          cardPosition,
+          clamped_xpos,
+          totalCardWidth / 2 + fadeMargin
+        )
+      ) {
+        const dist = Math.abs(cardPosition - clamped_xpos);
+        const percent = 1 - Math.abs((dist - totalCardWidth) / dist);
+        if (dist > totalCardWidth / 2)
+          cardImg.style.opacity = dist < totalCardWidth / 2 ? 0 : percent;
+      } else {
+        cardImg.style.opacity = 1;
+      }
+      // card.dataset.posx
+    });
   }
 
   function snapToCardPos(x, snapValues_arr) {
-    const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
-      Math.abs(v1 - v2) < epsilon;
     let nearValue = x;
     snapValues_arr.forEach((snapPos) => {
       if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
@@ -460,15 +494,7 @@ function Slider() {
   return (
     <div ref={domTarget} style={{ width: '100%', height: '100%' }}>
       <div ref={cardContainer} className={cardContainerStyles}>
-        <div
-          style={
-            {
-              // transform: wheelX.to(wheel),
-              // transition: 'transform 600ms ease-out',
-            }
-          }
-          className={`card-wrapper${hideSlider ? ' transparent' : ''}`}
-        >
+        <div className={`card-wrapper${hideSlider ? ' transparent' : ''}`}>
           {!preloading ? (
             options.map((o, i) => (
               <div key={i} className="card-section center" data-index={i}>
