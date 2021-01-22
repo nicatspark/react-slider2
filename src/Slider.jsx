@@ -5,7 +5,7 @@ import usePreventScroll from './utils/usePreventScroll';
 import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
-import expoSlide from './utils/expoSlide';
+import easeTo from './utils/easeTo';
 // import _ from 'lodash';
 import clsx from 'clsx';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
@@ -333,7 +333,7 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 //   el.addEventListener('wheel', preventHistoryBack, false);
 // };
 
-const onWheelFn = (state) => {
+const onInteractionFn = (state) => {
   // { offset: [x], wheeling }
   const {
     // offset: [x],
@@ -353,34 +353,47 @@ const onWheelFn = (state) => {
     CARD_WIDTH,
     IMG_WIDTH,
   } = STATE;
+  const clampNumber = (num, max, min) =>
+    Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
   const x = delta[0];
-  // console.log(x, wheeling);
   log(dragging);
+  // console.log(x, wheeling);
   const xpos = SCROLL_POS - x;
-  if (wheeling || dragging) moveTo(xpos);
+  if (wheeling || dragging) moveTo({ target: xpos });
   else {
     const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
-    const target_x = -snapToCardPos(-SCROLL_POS, snapValues_arr);
+    const [nearestCardPos, selectedIndex] = snapToCardPos(
+      -SCROLL_POS,
+      snapValues_arr
+    );
+    SET({ SELECTED_INDEX: selectedIndex });
+    const target_x = -nearestCardPos;
     // console.log('target_x', target_x, SCROLL_POS);
     const targetDistance = target_x - SCROLL_POS;
     // console.log('targetDistance', targetDistance);
-    expoSlide({
+    easeTo({
       durationMs: snapDurationMS,
       targetDistance,
       fnToRun: function (x) {
-        // console.log('x', x);
-        moveTo(SCROLL_POS + x);
+        moveTo({ target: SCROLL_POS + x });
       },
     }).then((lastx) => {
-      console.log('done', lastx);
+      console.log('done', Math.round(lastx), selectedIndex);
     });
   }
 
-  function moveTo(x) {
+  function moveTo({ distance, target, index }) {
+    const noError =
+      [distance, target, index].filter((a) => typeof a !== 'undefined')
+        .length === 1;
+    console.assert(
+      noError,
+      'The moveTo() function can only take one argument.'
+    );
+    if (!noError) return;
+    if (distance) target = SCROLL_POS + x;
     const maxScrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
-    const clampNumber = (num, max, min) =>
-      Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
-    const clamped_xpos = clampNumber(x, 0, -maxScrollDistance);
+    const clamped_xpos = clampNumber(target, 0, -maxScrollDistance);
     SET({ SCROLL_POS: clamped_xpos });
     cardsWrapper.style.transform = `translateX(${clamped_xpos}px)`;
     handleTranlucensy(-clamped_xpos);
@@ -388,10 +401,13 @@ const onWheelFn = (state) => {
 
   function handleTranlucensy(clamped_xpos) {
     const fadeMargin = 100;
+    // Test to see wich is most performance, CSS transition or JS high freq update.
+    const useCSSTransitionNotHighFreqJS = false;
     const totalCardWidth = Math.max(CARD_WIDTH, IMG_WIDTH);
     [...cardsCollection].forEach((card, i) => {
-      const cardPosition = card.dataset.posx;
+      const cardPosition = +card.dataset.posx;
       const cardImg = card.querySelector('img');
+      let styleObj = { opacity: 0 };
       if (
         approximatelyEqual(
           cardPosition,
@@ -400,24 +416,35 @@ const onWheelFn = (state) => {
         )
       ) {
         const dist = Math.abs(cardPosition - clamped_xpos);
-        const percent = 1 - Math.abs((dist - totalCardWidth) / dist);
-        if (dist > totalCardWidth / 2)
-          cardImg.style.opacity = dist < totalCardWidth / 2 ? 0 : percent;
+        let percent = 1 - Math.abs((dist - totalCardWidth) / dist);
+        percent = clampNumber(percent, 1, 0);
+
+        if (dist > totalCardWidth / 2) {
+          styleObj = useCSSTransitionNotHighFreqJS
+            ? {
+                transition: 'opacity 500ms',
+                willChange: 'opacity',
+                opacity: '0',
+              }
+            : { opacity: percent };
+        }
       } else {
-        cardImg.style.opacity = 1;
+        styleObj = { opacity: 1 };
       }
-      // card.dataset.posx
+      Object.assign(cardImg.style, styleObj);
     });
   }
 
   function snapToCardPos(x, snapValues_arr) {
-    let nearValue = x;
-    snapValues_arr.forEach((snapPos) => {
+    let nearValue = x,
+      index;
+    snapValues_arr.forEach((snapPos, i) => {
       if (approximatelyEqual(x, snapPos, CARD_SCROLL_DISTANCE / 2)) {
         nearValue = snapPos;
+        index = i;
       }
     });
-    return nearValue;
+    return [nearValue, index];
   }
 };
 
@@ -437,12 +464,13 @@ function Slider() {
 
   useGesture(
     {
-      onWheel: (state) => onWheelFn(state),
+      onWheel: (state) => onInteractionFn(state),
     },
     { domTarget, eventOptions: { passive: false } }
   );
   useDrag(
-    (state) => onWheelFn({ ...state, delta: state.delta.map((x) => x * -3) }),
+    (state) =>
+      onInteractionFn({ ...state, delta: state.delta.map((x) => x * -3) }),
     {
       domTarget,
       eventOptions: { passive: false },

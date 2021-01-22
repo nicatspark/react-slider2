@@ -5,7 +5,7 @@ Easing can be altred to any easing algoritm.
 Resolves a promise once done.
 */
 
-const expoSlide = ({ durationMs, targetDistance, fnToRun }) => {
+const easeTo = ({ durationMs, targetDistance, fnToRun }) => {
   return new Promise((resolve) => {
     let start;
     const easeOutQuad = (x) => 1 - (1 - x) * (1 - x);
@@ -27,4 +27,4 @@ const expoSlide = ({ durationMs, targetDistance, fnToRun }) => {
   });
 };
 
-export default expoSlide;
+export default easeTo;
