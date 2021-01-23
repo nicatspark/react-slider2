@@ -39,6 +39,7 @@ window.global = Object.freeze({
   CARDS_MOVING: { current: 0, unit: '', css: false },
   CARDS: { current: [], unit: '', css: false },
   SCROLL_POS: { current: 0, unit: '', css: false },
+  ZOOMED_OUT: { current: false, unit: '', css: false },
 });
 
 async function initiate() {
@@ -292,7 +293,10 @@ const setCardsToMicroState = (cards) => {
 
 const doOnPinch = (state, setZoomedOut) => {
   if (state.pinching) {
-    setZoomedOut(state.vdva[0] < 0 ? true : false);
+    const { SET } = stateGuiMediator();
+    const isPinching = state.vdva[0] < 0 ? true : false;
+    setZoomedOut(isPinching);
+    SET({ ZOOMED_OUT: isPinching });
   }
 };
 
@@ -333,15 +337,16 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 //   el.addEventListener('wheel', preventHistoryBack, false);
 // };
 
-const onInteractionFn = (state) => {
-  // { offset: [x], wheeling }
+const onInteractionFn = (pointerState) => {
+  if (!pointerState) return moveTo;
   const {
     // offset: [x],
     delta,
+    axis,
     wheeling,
     dragging,
     event,
-  } = state;
+  } = pointerState;
   // console.log('movement[0], x', Math.round(movement[0] / 15), window.temp - x);
   event.preventDefault();
   const snapDurationMS = 400;
@@ -352,13 +357,16 @@ const onInteractionFn = (state) => {
     SCROLL_POS,
     CARD_WIDTH,
     IMG_WIDTH,
+    ZOOMED_OUT,
   } = STATE;
   const clampNumber = (num, max, min) =>
     Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
-  const x = delta[0];
-  log(dragging);
-  // console.log(x, wheeling);
-  const xpos = SCROLL_POS - x;
+  let sign = -1;
+  if ((axis === 'x' && delta[0] > 0) || (axis === 'y' && delta[0] > 0))
+    sign = 1;
+  log(sign + ' ' + delta[0] + ' ' + delta[1]);
+  const x = axis === 'x' ? delta[0] : delta[1];
+  const xpos = SCROLL_POS - x * 1.3;
   if (wheeling || dragging) moveTo({ target: xpos });
   else {
     const snapValues_arr = CARDS.map((card, i) => CARD_SCROLL_DISTANCE * i);
@@ -368,9 +376,7 @@ const onInteractionFn = (state) => {
     );
     SET({ SELECTED_INDEX: selectedIndex });
     const target_x = -nearestCardPos;
-    // console.log('target_x', target_x, SCROLL_POS);
     const targetDistance = target_x - SCROLL_POS;
-    // console.log('targetDistance', targetDistance);
     easeTo({
       durationMs: snapDurationMS,
       targetDistance,
@@ -400,7 +406,13 @@ const onInteractionFn = (state) => {
   }
 
   function handleTranlucensy(clamped_xpos) {
-    const fadeMargin = 100;
+    if (ZOOMED_OUT) {
+      [...cardsCollection].forEach((card, i) => {
+        card.querySelector('img').style.opacity = 1;
+      });
+      return;
+    }
+    const fadeMarginPx = 100;
     // Test to see wich is most performance, CSS transition or JS high freq update.
     const useCSSTransitionNotHighFreqJS = false;
     const totalCardWidth = Math.max(CARD_WIDTH, IMG_WIDTH);
@@ -412,7 +424,7 @@ const onInteractionFn = (state) => {
         approximatelyEqual(
           cardPosition,
           clamped_xpos,
-          totalCardWidth / 2 + fadeMargin
+          totalCardWidth / 2 + fadeMarginPx
         )
       ) {
         const dist = Math.abs(cardPosition - clamped_xpos);
@@ -450,6 +462,7 @@ const onInteractionFn = (state) => {
 
 function Slider() {
   console.log('rendered');
+  // const {SET} = stateGuiMediator();
   const domTarget = useRef(null);
   const [options, setOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
