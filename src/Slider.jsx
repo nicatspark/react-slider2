@@ -2,7 +2,7 @@ import { useEffect, useState, useRef } from 'react';
 import BtnToggle from './BtnToggle.jsx';
 import usePreventScroll from './utils/usePreventScroll';
 // import Portal from './Portal';
-import motionBlur from './utils/motion-blur-move';
+// import motionBlur from './utils/motion-blur-move';
 import microState from './utils/microState';
 import preloadImages from './utils/preloadImages';
 import easeTo from './utils/easeTo';
@@ -21,12 +21,15 @@ Nice to have:
 - Alternative CSS transition scroll.
 */
 
+/* Helper functions */
 const log = (x) => {
   const el = document.querySelector('.log');
   el.innerHTML = JSON.stringify(x) + '<br>' + el.innerHTML;
 };
 const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
   Math.abs(v1 - v2) < epsilon;
+const clampNumber = (num, max, min) =>
+  Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -40,6 +43,7 @@ window.global = Object.freeze({
   CARDS: { current: [], unit: '', css: false },
   SCROLL_POS: { current: 0, unit: '', css: false },
   ZOOMED_OUT: { current: false, unit: '', css: false },
+  MAX_SCROLL_DISTANCE: { current: 0, unit: 'px', css: false },
 });
 
 async function initiate() {
@@ -51,7 +55,7 @@ async function initiate() {
 }
 
 const adjustCardSpacing = () => {
-  const { SET, cardsCollection } = stateGuiMediator();
+  const { SET, STATE, cardsCollection } = stateGuiMediator();
   return new Promise((resolve) => {
     const { firstImage, documentRoot } = stateGuiMediator();
     firstImage.addEventListener('load', _distributeCards);
@@ -67,12 +71,15 @@ const adjustCardSpacing = () => {
       const CARD_GAP = CARD_IMG_SPACING + imageOverflow * 2; // parseInt(rootStyle.getPropertyValue('--card-gap'));
       const CARD_SCROLL_DISTANCE =
         CARD_WIDTH + imageOverflow * 2 + CARD_IMG_SPACING;
+      const MAX_SCROLL_DISTANCE =
+        CARD_SCROLL_DISTANCE * (STATE.CARDS.length - 1);
       SET({
         IMG_WIDTH,
         CARD_WIDTH,
         CARD_GAP,
         CARD_SCROLL_DISTANCE,
         CARD_IMG_SPACING,
+        MAX_SCROLL_DISTANCE,
       });
       [...cardsCollection].forEach((card, i) => {
         card.dataset.posx = Math.round(CARD_SCROLL_DISTANCE * i);
@@ -89,63 +96,63 @@ const resetCardsPos = () => {
   SET({ CARD_CENTER_OFFSET });
 };
 
-const slideCards = ({ nextIndex }) => {
-  console.assert(
-    !isNaN(nextIndex) && nextIndex >= 0,
-    `Wrong argument passed to slideCards function.`
-  );
-  const index = parseInt(nextIndex);
-  const { cardsWrapper, cardsCollection, SET, STATE } = stateGuiMediator();
-  _setState({ index });
-  const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
-  // eslint-disable-next-line
-  const regexParentesisContent = /\(([^\)]*)\)/;
-  const startValue =
-    window.getComputedStyle(cardsWrapper).transform !== 'none'
-      ? Math.round(
-          cardsWrapperStyles.transform
-            .match(regexParentesisContent)[1]
-            .split(',')[4]
-        )
-      : 0;
-  const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
-  // Skip motionblur on anything else than chromium.
-  const isChrome =
-    !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
-  const isEdgeChromium = isChrome && navigator.userAgent.indexOf('Edg') !== -1;
-  const useMotionBlur = isChrome || isEdgeChromium;
-  //
-  return motionBlur(cardsWrapper, {
-    durationMs: 250,
-    properties: [
-      {
-        property: 'transform',
-        start: `translateX(${startValue}px)`,
-        end: `translateX(${endValue}px)`,
-      },
-    ],
-    applyToggle: false,
-    easing: 'easeOutQuad',
-    useMotionBlur,
-    blurMultiplier: 0.2,
-  }).then(({ element }) => {
-    SET({ CARDS_MOVING: 0 });
-    _setSelectedCardIndex(index);
-    // console.log('done', element);
-  });
-  function _setState({ index }) {
-    let CARDS_MOVING = 0;
-    if (index > STATE.SELECTED_INDEX) CARDS_MOVING = 1;
-    if (index < STATE.SELECTED_INDEX) CARDS_MOVING = -1;
-    SET({ SELECTED_INDEX: index, CARDS_MOVING });
-  }
-  function _setSelectedCardIndex(index) {
-    [...cardsCollection].forEach((card) => {
-      card.classList.remove('selected');
-    });
-    cardsCollection[index].classList.add('selected');
-  }
-};
+// const slideCards = ({ nextIndex }) => {
+//   console.assert(
+//     !isNaN(nextIndex) && nextIndex >= 0,
+//     `Wrong argument passed to slideCards function.`
+//   );
+//   const index = parseInt(nextIndex);
+//   const { cardsWrapper, cardsCollection, SET, STATE } = stateGuiMediator();
+//   _setState({ index });
+//   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
+//   // eslint-disable-next-line
+//   const regexParentesisContent = /\(([^\)]*)\)/;
+//   const startValue =
+//     window.getComputedStyle(cardsWrapper).transform !== 'none'
+//       ? Math.round(
+//           cardsWrapperStyles.transform
+//             .match(regexParentesisContent)[1]
+//             .split(',')[4]
+//         )
+//       : 0;
+//   const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
+//   // Skip motionblur on anything else than chromium.
+//   const isChrome =
+//     !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
+//   const isEdgeChromium = isChrome && navigator.userAgent.indexOf('Edg') !== -1;
+//   const useMotionBlur = isChrome || isEdgeChromium;
+//   //
+//   return motionBlur(cardsWrapper, {
+//     durationMs: 250,
+//     properties: [
+//       {
+//         property: 'transform',
+//         start: `translateX(${startValue}px)`,
+//         end: `translateX(${endValue}px)`,
+//       },
+//     ],
+//     applyToggle: false,
+//     easing: 'easeOutQuad',
+//     useMotionBlur,
+//     blurMultiplier: 0.2,
+//   }).then(({ element }) => {
+//     SET({ CARDS_MOVING: 0 });
+//     _setSelectedCardIndex(index);
+//     // console.log('done', element);
+//   });
+//   function _setState({ index }) {
+//     let CARDS_MOVING = 0;
+//     if (index > STATE.SELECTED_INDEX) CARDS_MOVING = 1;
+//     if (index < STATE.SELECTED_INDEX) CARDS_MOVING = -1;
+//     SET({ SELECTED_INDEX: index, CARDS_MOVING });
+//   }
+//   function _setSelectedCardIndex(index) {
+//     [...cardsCollection].forEach((card) => {
+//       card.classList.remove('selected');
+//     });
+//     cardsCollection[index].classList.add('selected');
+//   }
+// };
 
 const stateGuiMediator = () => {
   const cardsCollection = document.querySelectorAll('.card-section');
@@ -171,8 +178,8 @@ const stateGuiMediator = () => {
   };
 };
 
-const test = process.env;
-console.log('test', test);
+// const test = process.env;
+// console.log('test', test);
 const fetchApi = () => {
   // const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
@@ -338,7 +345,9 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 // };
 
 const onInteractionFn = (pointerState) => {
-  if (!pointerState) return moveTo;
+  if (!pointerState) return { moveTo, easeSliderTo };
+  console.log(pointerState.event.type);
+  if (['pointerdown', 'pointerup'].includes(pointerState.event.type)) return;
   const {
     // offset: [x],
     delta,
@@ -350,17 +359,8 @@ const onInteractionFn = (pointerState) => {
   // console.log('movement[0], x', Math.round(movement[0] / 15), window.temp - x);
   event.preventDefault();
   const snapDurationMS = 400;
-  const { SET, STATE, cardsWrapper, cardsCollection } = stateGuiMediator();
-  const {
-    CARD_SCROLL_DISTANCE,
-    CARDS,
-    SCROLL_POS,
-    CARD_WIDTH,
-    IMG_WIDTH,
-    ZOOMED_OUT,
-  } = STATE;
-  const clampNumber = (num, max, min) =>
-    Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
+  const { SET, STATE } = stateGuiMediator();
+  const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
   let sign = -1;
   if ((axis === 'x' && delta[0] > 0) || (axis === 'y' && delta[0] > 0))
     sign = 1;
@@ -376,7 +376,8 @@ const onInteractionFn = (pointerState) => {
     );
     SET({ SELECTED_INDEX: selectedIndex });
     const target_x = -nearestCardPos;
-    const targetDistance = target_x - SCROLL_POS;
+    const targetDistance = Math.round(target_x - SCROLL_POS);
+    // TODO: use extracted function instead.
     easeTo({
       durationMs: snapDurationMS,
       targetDistance,
@@ -388,7 +389,38 @@ const onInteractionFn = (pointerState) => {
     });
   }
 
-  function moveTo({ distance, target, index }) {
+  async function easeSliderTo({ distance, target, index, durationMs = 800 }) {
+    if (!_argsAreValid(arguments[0])) return;
+    const { SET, STATE, cardsCollection } = stateGuiMediator();
+    const { SCROLL_POS, MAX_SCROLL_DISTANCE } = STATE;
+    if (distance) target = SCROLL_POS + x;
+    if (index) {
+      target = +cardsCollection[index].dataset.posx;
+    } else {
+      target = +target;
+      [...cardsCollection].forEach((c, i) => {
+        if (+c.dataset.posx === target) index = i;
+      });
+    }
+    const clamped_xpos = clampNumber(target, 0, MAX_SCROLL_DISTANCE);
+    distance = Math.round(-clamped_xpos - SCROLL_POS);
+    SET({ SELECTED_CARD: index });
+    // SET({ SCROLL_POS: clamped_xpos });
+    return easeTo({
+      durationMs,
+      targetDistance: distance,
+      fnToRun: function (x) {
+        console.assert(!isNaN(x), 'X-position is not a number in callback.');
+        moveTo({ target: SCROLL_POS + x });
+      },
+    });
+    // .then((lastx) => {
+    //   debugger;
+    //   console.log('done', Math.round(lastx), index);
+    // });
+  }
+
+  function _argsAreValid({ distance, target, index }) {
     const noError =
       [distance, target, index].filter((a) => typeof a !== 'undefined')
         .length === 1;
@@ -396,16 +428,24 @@ const onInteractionFn = (pointerState) => {
       noError,
       'The moveTo() function can only take one argument.'
     );
-    if (!noError) return;
+    return noError;
+  }
+
+  function moveTo({ distance, target, index }) {
+    const { SET, STATE, cardsWrapper, cardsCollection } = stateGuiMediator();
+    const { MAX_SCROLL_DISTANCE, SCROLL_POS } = STATE;
+    if (!_argsAreValid(arguments[0])) return;
     if (distance) target = SCROLL_POS + x;
-    const maxScrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
-    const clamped_xpos = clampNumber(target, 0, -maxScrollDistance);
+    if (index) target = +cardsCollection[index].dataset.posx;
+    const clamped_xpos = clampNumber(target, 0, -MAX_SCROLL_DISTANCE);
     SET({ SCROLL_POS: clamped_xpos });
     cardsWrapper.style.transform = `translateX(${clamped_xpos}px)`;
     handleTranlucensy(-clamped_xpos);
   }
 
   function handleTranlucensy(clamped_xpos) {
+    const { STATE, cardsCollection } = stateGuiMediator();
+    const { ZOOMED_OUT, CARD_WIDTH, IMG_WIDTH } = STATE;
     if (ZOOMED_OUT) {
       [...cardsCollection].forEach((card, i) => {
         card.querySelector('img').style.opacity = 1;
@@ -478,6 +518,9 @@ function Slider() {
   useGesture(
     {
       onWheel: (state) => onInteractionFn(state),
+      onPointerDown: ({ event, ...sharedState }: event) => {
+        handleClick(event);
+      },
     },
     { domTarget, eventOptions: { passive: false } }
   );
@@ -486,6 +529,7 @@ function Slider() {
       onInteractionFn({ ...state, delta: state.delta.map((x) => x * -3) }),
     {
       domTarget,
+      delay: true,
       eventOptions: { passive: false },
     }
   );
@@ -493,10 +537,16 @@ function Slider() {
   const toggleZoomInOut = () => setZoomedOut(!zoomedOut);
 
   const handleClick = async (e) => {
+    const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
+    if (clickInsideZoomToggleBtn(e)) return;
+    if (zoomedOut) setZoomedOut(false);
     const selectedCard = e.target.closest('.card-section');
     if (!selectedCard) return;
-    const { index: nextIndex } = selectedCard.dataset;
-    return slideCards({ nextIndex });
+    // const { index: nextIndex, posx } = selectedCard.dataset;
+    const { easeSliderTo } = onInteractionFn();
+    await easeSliderTo({ target: +selectedCard.dataset.posx });
+    console.log('wait done');
+    // return slideCards({ nextIndex });
   };
 
   useEffect(() => {
@@ -515,16 +565,16 @@ function Slider() {
     init();
   }, [setOptions, setScrollDisabled]);
 
-  useEffect(() => {
-    window.addEventListener('click', clickActions);
-    const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
-    //
-    async function clickActions(e) {
-      if (clickInsideZoomToggleBtn(e)) return;
-      if (zoomedOut) setZoomedOut(false);
-      await handleClick(e);
-    }
-  }, [zoomedOut]);
+  // useEffect(() => {
+  //   window.addEventListener('click', clickActions);
+  //   const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
+  //   //
+  //   async function clickActions(e) {
+  //     if (clickInsideZoomToggleBtn(e)) return;
+  //     if (zoomedOut) setZoomedOut(false);
+  //     await handleClick(e);
+  //   }
+  // }, [zoomedOut]);
 
   const cardContainerStyles = clsx({
     'card-container': true,

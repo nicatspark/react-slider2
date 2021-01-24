@@ -13,6 +13,7 @@ const Log = styled.div`
   top: 0;
   left: 0;
   font-size: 0.7rem;
+  mix-blend-mode: exclusion;
 `;
 
 function App() {
