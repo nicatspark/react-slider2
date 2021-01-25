@@ -30,6 +30,7 @@ const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
   Math.abs(v1 - v2) < epsilon;
 const clampNumber = (num, max, min) =>
   Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
+/* End: Helper functions */
 
 window.global = Object.freeze({
   CARD_CENTER_OFFSET: { current: 0, unit: 'px', css: true },
@@ -96,64 +97,6 @@ const resetCardsPos = () => {
   SET({ CARD_CENTER_OFFSET });
 };
 
-// const slideCards = ({ nextIndex }) => {
-//   console.assert(
-//     !isNaN(nextIndex) && nextIndex >= 0,
-//     `Wrong argument passed to slideCards function.`
-//   );
-//   const index = parseInt(nextIndex);
-//   const { cardsWrapper, cardsCollection, SET, STATE } = stateGuiMediator();
-//   _setState({ index });
-//   const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
-//   // eslint-disable-next-line
-//   const regexParentesisContent = /\(([^\)]*)\)/;
-//   const startValue =
-//     window.getComputedStyle(cardsWrapper).transform !== 'none'
-//       ? Math.round(
-//           cardsWrapperStyles.transform
-//             .match(regexParentesisContent)[1]
-//             .split(',')[4]
-//         )
-//       : 0;
-//   const endValue = STATE.CARD_SCROLL_DISTANCE * index * -1;
-//   // Skip motionblur on anything else than chromium.
-//   const isChrome =
-//     !!window.chrome && (!!window.chrome.webstore || !!window.chrome.runtime);
-//   const isEdgeChromium = isChrome && navigator.userAgent.indexOf('Edg') !== -1;
-//   const useMotionBlur = isChrome || isEdgeChromium;
-//   //
-//   return motionBlur(cardsWrapper, {
-//     durationMs: 250,
-//     properties: [
-//       {
-//         property: 'transform',
-//         start: `translateX(${startValue}px)`,
-//         end: `translateX(${endValue}px)`,
-//       },
-//     ],
-//     applyToggle: false,
-//     easing: 'easeOutQuad',
-//     useMotionBlur,
-//     blurMultiplier: 0.2,
-//   }).then(({ element }) => {
-//     SET({ CARDS_MOVING: 0 });
-//     _setSelectedCardIndex(index);
-//     // console.log('done', element);
-//   });
-//   function _setState({ index }) {
-//     let CARDS_MOVING = 0;
-//     if (index > STATE.SELECTED_INDEX) CARDS_MOVING = 1;
-//     if (index < STATE.SELECTED_INDEX) CARDS_MOVING = -1;
-//     SET({ SELECTED_INDEX: index, CARDS_MOVING });
-//   }
-//   function _setSelectedCardIndex(index) {
-//     [...cardsCollection].forEach((card) => {
-//       card.classList.remove('selected');
-//     });
-//     cardsCollection[index].classList.add('selected');
-//   }
-// };
-
 const stateGuiMediator = () => {
   const cardsCollection = document.querySelectorAll('.card-section');
   const cardsWrapper = cardsCollection[0]?.parentElement;
@@ -181,29 +124,32 @@ const stateGuiMediator = () => {
 // const test = process.env;
 // console.log('test', test);
 const fetchApi = () => {
-  // const { SET } = stateGuiMediator();
   return new Promise((resolve) => {
-    // const tempUrl = 'https://source.unsplash.com/random/500x500';
     const cardsArr = [
       {
-        header: 'header1',
+        header: 'header 1',
         imageUrl: '/images/00042_G.png',
+        defaultSelected: false,
       },
       {
-        header: 'header2',
+        header: 'header 2',
         imageUrl: '/images/00042_H.png',
+        defaultSelected: true,
       },
       {
-        header: 'header3',
+        header: 'header 3',
         imageUrl: '/images/00042_J.png',
+        defaultSelected: false,
       },
       {
-        header: 'header4',
+        header: 'header 4',
         imageUrl: '/images/00042_L.png',
+        defaultSelected: false,
       },
       {
-        header: 'header5',
+        header: 'header 5',
         imageUrl: '/images/00042_S.png',
+        defaultSelected: false,
       },
     ];
     setTimeout(() => {
@@ -218,136 +164,31 @@ const setCardsToMicroState = (cards) => {
   SET_COMPLEX({ CARDS: cards });
 };
 
-// const handleGestures = (e, setZoomedOut) => {
-//   e.preventDefault();
-//   const { cardsWrapper, STATE, SET, REMOVE } = stateGuiMediator();
-//   const pinchDetected = (e) => e.ctrlKey;
-//   const isZoomIn = (deltaY) => !!Math.max(0, deltaY);
-//   const cardsAlreadyInMotion = () => !!Math.abs(STATE.CARDS_MOVING);
-//   const horisontalSwipeDetected = (e) =>
-//     Math.abs(e.deltaX) && Math.abs(e.deltaX) > Math.abs(e.deltaY);
-//   //
-//   if (pinchDetected(e)) {
-//     setZoomedOut(isZoomIn(e.deltaY));
-//   } else {
-//     // console.log(!horisontalSwipeDetected(e), cardsAlreadyInMotion());
-//     if (!horisontalSwipeDetected(e) || cardsAlreadyInMotion()) return;
-//     console.log('PAN', e.deltaX);
-//     if (e.deltaX < 0) {
-//       // previous card.
-//       const nextSelectedIndex = Math.max(0, STATE.SELECTED_INDEX - 1);
-//       const isOverscrollLeft = STATE.SELECTED_INDEX - 1 < 0;
-//       if (isOverscrollLeft) overScrollAnim(1);
-//       else slideCards({ nextIndex: nextSelectedIndex });
-//     } else {
-//       // Next card.
-//       const isOverscrollRight =
-//         STATE.CARDS.length - 1 < STATE.SELECTED_INDEX + 1;
-//       const nextSelectedIndex = Math.min(
-//         STATE.CARDS.length - 1,
-//         STATE.SELECTED_INDEX + 1
-//       );
-//       if (isOverscrollRight) overScrollAnim(-1);
-//       else slideCards({ nextIndex: nextSelectedIndex });
-//     }
-//     async function overScrollAnim(dir) {
-//       if (debounce()) return;
-//       const overScrollDist = -40;
-//       // eslint-disable-next-line
-//       const regexParentesisContent = /\(([^\)]*)\)/;
-//       const cardsWrapperStyles = window.getComputedStyle(cardsWrapper);
-//       const startValue =
-//         window.getComputedStyle(cardsWrapper).transform !== 'none'
-//           ? Math.round(
-//               cardsWrapperStyles.transform
-//                 .match(regexParentesisContent)[1]
-//                 .split(',')[4]
-//             )
-//           : 0;
-//       await motionBlur(cardsWrapper, {
-//         durationMs: 100,
-//         properties: [
-//           {
-//             property: 'transform',
-//             start: `translateX(${startValue}px)`,
-//             end: `translateX(${startValue - overScrollDist * dir}px)`,
-//           },
-//         ],
-//         easing: 'easeOutQuad',
-//       });
-//       motionBlur(cardsWrapper, {
-//         durationMs: 250,
-//         properties: [
-//           {
-//             property: 'transform',
-//             start: `translateX(${startValue - overScrollDist * dir}px)`,
-//             end: `translateX(${startValue}px)`,
-//           },
-//         ],
-//         easing: 'easeInQuad',
-//       });
-//       function debounce() {
-//         if (STATE.TEMP_OVERSCROLL_PREVENTER) return true;
-//         SET({ TEMP_OVERSCROLL_PREVENTER: true });
-//         setTimeout(() => {
-//           REMOVE({ TEMP_OVERSCROLL_PREVENTER: null });
-//         }, 1000);
-//         return false;
-//       }
-//     }
-//   }
-// };
-
 const doOnPinch = (state, setZoomedOut) => {
   if (state.pinching) {
-    const { SET } = stateGuiMediator();
-    const isPinching = state.vdva[0] < 0 ? true : false;
+    const { SET, STATE } = stateGuiMediator();
+    let [isPinching] = state.vdva;
+    if (isPinching === 0) return;
+    isPinching = isPinching < 0;
+    if (isPinching === STATE.ZOOMED_OUT) return;
     setZoomedOut(isPinching);
     SET({ ZOOMED_OUT: isPinching });
   }
 };
 
-// const wheel = (x) => {
-//   const { SET, STATE, cardsWrapper } = stateGuiMediator();
-//   const { CARD_SCROLL_DISTANCE, CARDS } = STATE;
-//   if (!CARDS.length || !cardsWrapper) return 0;
-//   console.log('x-diff:', Math.round(window.temp - x));
-//   const maxScrollDistance = CARD_SCROLL_DISTANCE * (CARDS.length - 1);
-//   const clampNumber = (num, max, min) =>
-//     Math.max(Math.min(num, Math.max(max, min)), Math.min(max, min));
-//   const xpos = STATE.SCROLL_POS + x - (window.temp || 0);
-//   window.temp = x;
-//   const clamped_xpos = clampNumber(xpos, maxScrollDistance, 0);
-//   SET({ SCROLL_POS: clamped_xpos });
-//   return `translateX(${clamped_xpos * -1}px)`; // -imgWidth * (x < 0 ? 6 : 1) - (x % (imgWidth * 5
-// };
-
 // Prevent accesability zoom in safari/iphone.
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('gesturechange', (e) => e.preventDefault());
-// let el;
-// const preventHistoryBack = (e) => {
-//   var delta = e.deltaX || e.wheelDeltaX;
-//   if (!delta) return;
-//   window.WebKitMediaKeyError /*detect safari*/ && (delta *= -1);
-//   if (
-//     (el.scrollLeft + el.offsetWidth === el.scrollWidth && delta > 0) ||
-//     (el.scrollLeft === 0 && delta < 0)
-//   ) {
-//     e.preventDefault();
-//     console.log('preventing');
-//   }
-// };
-// window.onload = () => {
-//   el = document.querySelector('.pancake-grid');
-//   el.addEventListener('mousewheel', preventHistoryBack, false);
-//   el.addEventListener('wheel', preventHistoryBack, false);
-// };
 
 const onInteractionFn = (pointerState) => {
   if (!pointerState) return { moveTo, easeSliderTo };
   console.log(pointerState.event.type);
-  if (['pointerdown', 'pointerup'].includes(pointerState.event.type)) return;
+  if (
+    ['pointerdown', 'pointerup', 'pointermove'].includes(
+      pointerState.event.type
+    )
+  )
+    return;
   const {
     // offset: [x],
     delta,
@@ -356,7 +197,6 @@ const onInteractionFn = (pointerState) => {
     dragging,
     event,
   } = pointerState;
-  // console.log('movement[0], x', Math.round(movement[0] / 15), window.temp - x);
   event.preventDefault();
   const snapDurationMS = 400;
   const { SET, STATE } = stateGuiMediator();
@@ -381,15 +221,14 @@ const onInteractionFn = (pointerState) => {
     easeTo({
       durationMs: snapDurationMS,
       targetDistance,
-      fnToRun: function (x) {
-        moveTo({ target: SCROLL_POS + x });
-      },
+      fnToRun: (x) => moveTo({ target: SCROLL_POS + x }),
     }).then((lastx) => {
       console.log('done', Math.round(lastx), selectedIndex);
     });
+    // easeSliderTo({ distance: targetDistance, durationMs: snapDurationMS });
   }
 
-  async function easeSliderTo({ distance, target, index, durationMs = 800 }) {
+  async function easeSliderTo({ distance, target, index, durationMs = 400 }) {
     if (!_argsAreValid(arguments[0])) return;
     const { SET, STATE, cardsCollection } = stateGuiMediator();
     const { SCROLL_POS, MAX_SCROLL_DISTANCE } = STATE;
@@ -409,10 +248,7 @@ const onInteractionFn = (pointerState) => {
     return easeTo({
       durationMs,
       targetDistance: distance,
-      fnToRun: function (x) {
-        console.assert(!isNaN(x), 'X-position is not a number in callback.');
-        moveTo({ target: SCROLL_POS + x });
-      },
+      fnToRun: (x) => moveTo({ target: SCROLL_POS + x }),
     });
     // .then((lastx) => {
     //   debugger;
@@ -518,7 +354,7 @@ function Slider() {
   useGesture(
     {
       onWheel: (state) => onInteractionFn(state),
-      onPointerDown: ({ event, ...sharedState }: event) => {
+      onPointerDown: ({ event, ...sharedState }) => {
         handleClick(event);
       },
     },
@@ -539,7 +375,8 @@ function Slider() {
   const handleClick = async (e) => {
     const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
     if (clickInsideZoomToggleBtn(e)) return;
-    if (zoomedOut) setZoomedOut(false);
+    console.log('zoomedOut', zoomedOut);
+    setZoomedOut(false);
     const selectedCard = e.target.closest('.card-section');
     if (!selectedCard) return;
     // const { index: nextIndex, posx } = selectedCard.dataset;
@@ -548,6 +385,12 @@ function Slider() {
     console.log('wait done');
     // return slideCards({ nextIndex });
   };
+
+  useEffect(() => {
+    const { SET } = stateGuiMediator();
+    SET({ ZOOMED_OUT: zoomedOut });
+    console.log('zoomedOut', zoomedOut);
+  }, [zoomedOut]);
 
   useEffect(() => {
     const init = async () => {
@@ -602,13 +445,22 @@ function Slider() {
               </div>
             ))
           ) : (
-            <div className="card-section center preloader-card">
-              <div className="image animated-background"></div>
-              <div className="header animated-background">
-                <h4>&nbsp;</h4>
+            <>
+              <div className="card-section center preloader-card">
+                <div className="image animated-background"></div>
+                <div className="header animated-background">
+                  <h4>&nbsp;</h4>
+                </div>
+                <div className="paragraph animated-background">&nbsp;</div>
               </div>
-              <div className="paragraph animated-background">&nbsp;</div>
-            </div>
+              <div className="card-section center preloader-card">
+                <div className="image animated-background"></div>
+                <div className="header animated-background">
+                  <h4>&nbsp;</h4>
+                </div>
+                <div className="paragraph animated-background">&nbsp;</div>
+              </div>
+            </>
           )}
         </div>
       </div>

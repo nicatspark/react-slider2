@@ -96,6 +96,7 @@ div.card-section {
 .preloader-card {
   // transform: translateX(-50%);
   width: var(--card-width);
+  margin-right: 100px;
   & > div {
     width: var(--card-width);
     border-radius: 5px;
