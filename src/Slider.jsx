@@ -46,8 +46,11 @@ window.global = Object.freeze({
 });
 
 async function initiate() {
+  const { SET, STATE } = stateGuiMediator();
   await adjustCardSpacing();
   return new Promise((resolve) => {
+    const defaultSelectIndex = STATE.CARDS.findIndex((c) => c.defaultSelected);
+    SET({ SELECTED_INDEX: defaultSelectIndex || 0 });
     resetCardsPos();
     resolve();
   });
@@ -219,7 +222,10 @@ const onInteractionFn = (pointerState) => {
     easeTo({
       durationMs: snapDurationMS,
       targetDistance,
-      fnToRun: (x) => moveTo({ target: SCROLL_POS + x }),
+      fnToRun: (x) => {
+        console.log('x', x);
+        moveTo({ target: SCROLL_POS + x });
+      },
     });
     // .then((lastx) => {
     //   console.log('done', Math.round(lastx), selectedIndex);
@@ -232,31 +238,30 @@ const onInteractionFn = (pointerState) => {
     const { SET, STATE, cardsCollection } = stateGuiMediator();
     const { SCROLL_POS, MAX_SCROLL_DISTANCE } = STATE;
     if (distance) target = SCROLL_POS + x;
-    if (index) {
+    if (index >= 0) {
       target = +cardsCollection[index].dataset.posx;
     } else {
       target = +target;
-      [...cardsCollection].forEach((c, i) => {
-        if (+c.dataset.posx === target) index = i;
-      });
+      index = [...cardsCollection].findIndex((c) => +c.dataset.posx === target);
     }
     const clamped_xpos = clampNumber(target, 0, MAX_SCROLL_DISTANCE);
     distance = Math.round(-clamped_xpos - SCROLL_POS);
-    SET({ SELECTED_CARD: index });
+    SET({ SELECTED_INDEX: index });
     return easeTo({
       durationMs,
       targetDistance: distance,
-      fnToRun: (x) => moveTo({ target: SCROLL_POS + x }),
+      fnToRun: (x) => moveTo({ target: SCROLL_POS + x, index }),
     });
   }
 
   function _argsAreValid({ distance, target, index }) {
-    const noError =
-      [distance, target, index].filter((a) => typeof a !== 'undefined')
-        .length === 1;
+    const hasRelativOrAbsolutArgs = [distance, target].filter(
+      (a) => typeof a !== 'undefined'
+    ).length;
+    const noError = hasRelativOrAbsolutArgs === 1 || index;
     console.assert(
       noError,
-      'The moveTo() function can only take one argument.'
+      'The moveTo() function can only take distance OR target, AND/OR index.'
     );
     return noError;
   }
@@ -264,9 +269,15 @@ const onInteractionFn = (pointerState) => {
   function moveTo({ distance, target, index }) {
     const { SET, STATE, cardsWrapper, cardsCollection } = stateGuiMediator();
     const { MAX_SCROLL_DISTANCE, SCROLL_POS } = STATE;
+    console.log('target', target);
     if (!_argsAreValid(arguments[0])) return;
-    if (distance) target = SCROLL_POS + x;
-    if (index) target = +cardsCollection[index].dataset.posx;
+    if (distance && !index) target = SCROLL_POS + x;
+    if (index && !distance && !target)
+      target = -cardsCollection[index].dataset.posx;
+    console.assert(
+      target <= 20,
+      `Target in moveTo fn out of bounds. ${target}`
+    );
     const clamped_xpos = clampNumber(target, 0, -MAX_SCROLL_DISTANCE);
     SET({ SCROLL_POS: clamped_xpos });
     cardsWrapper.style.transform = `translateX(${clamped_xpos}px)`;
@@ -274,11 +285,12 @@ const onInteractionFn = (pointerState) => {
   }
 
   function handleTranlucensy(clamped_xpos) {
+    const maxOpacity = 0.5;
     const { STATE, cardsCollection } = stateGuiMediator();
     const { ZOOMED_OUT, CARD_WIDTH, IMG_WIDTH } = STATE;
     if (ZOOMED_OUT) {
       [...cardsCollection].forEach((card, i) => {
-        card.querySelector('img').style.opacity = 1;
+        card.querySelector('img').style.opacity = maxOpacity;
       });
       return;
     }
@@ -299,7 +311,7 @@ const onInteractionFn = (pointerState) => {
       ) {
         const dist = Math.abs(cardPosition - clamped_xpos);
         let percent = 1 - Math.abs((dist - totalCardWidth) / dist);
-        percent = clampNumber(percent, 1, 0);
+        percent = clampNumber(percent, 1, 0) * maxOpacity;
 
         if (dist > totalCardWidth / 2) {
           styleObj = useCSSTransitionNotHighFreqJS
@@ -311,7 +323,7 @@ const onInteractionFn = (pointerState) => {
             : { opacity: percent };
         }
       } else {
-        styleObj = { opacity: 1 };
+        styleObj = { opacity: maxOpacity };
       }
       Object.assign(cardImg.style, styleObj);
     });
@@ -388,6 +400,9 @@ function Slider() {
       setOptions(cardsArr);
       await initiate();
       setHideSlider(false);
+      onInteractionFn().easeSliderTo({
+        index: stateGuiMediator().STATE.SELECTED_INDEX,
+      });
       if (true) setScrollDisabled(true);
       console.log('React inited');
     };
