@@ -24,6 +24,9 @@ const log = (x) => {
   const el = document.querySelector('.log');
   el.innerHTML = JSON.stringify(x) + '<br>' + el.innerHTML;
 };
+const touchSupported = () =>
+  'ontouchstart' in window ||
+  (window.DocumentTouch && document instanceof window.DocumentTouch);
 const approximatelyEqual = (v1, v2, epsilon = 0.001) =>
   Math.abs(v1 - v2) < epsilon;
 const clampNumber = (num, max, min) =>
@@ -184,10 +187,12 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 const onInteractionFn = (pointerState) => {
   if (!pointerState) return { moveTo, easeSliderTo };
   console.log(pointerState.event.type);
+  log(pointerState.event.type);
   if (
     ['pointerdown', 'pointerup', 'pointermove'].includes(
       pointerState.event.type
-    )
+    ) &&
+    !touchSupported()
   )
     return;
   const {
