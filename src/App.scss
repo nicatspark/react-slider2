@@ -4,6 +4,8 @@
   --card-width: 300px;
   --card-center-offset: calc(var(--card-width) / -2);
   --card-img-spacing: 100px; // Source for distribution.
+  --selected-img-height: 55vh;
+  --slider-vertical-padding: 15px;
 }
 
 .App {
@@ -27,7 +29,7 @@
   div.content-frame {
     overflow: hidden;
     height: calc(100vh - var(--header-height));
-    padding: 15px 0;
+    padding: var(--slider-vertical-padding) 0;
   }
 }
 
@@ -65,15 +67,13 @@ div.card-wrapper {
 
 div.card-section {
   color: #fff;
-  // background-color: #2d2d2d;
   width: var(--card-width);
   height: inherit;
   display: grid;
-  grid-template-rows: 55vh auto 1fr;
+  grid-template-rows: var(--selected-img-height) auto 1fr;
   gap: 0.5rem;
   place-items: center;
   &:not(.preloader-card) > div {
-    // background-color: red;
     border: 1px dashed rgba(255, 255, 255, 0.3);
     height: 100%;
     justify-self: stretch;

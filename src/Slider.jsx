@@ -7,6 +7,7 @@ import easeTo from './utils/easeTo';
 import clsx from 'clsx';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
+import { SelectedOption } from './sliderStyles.js';
 
 /* TODO
 - Test the 'touchmove' event for iphone.
@@ -438,6 +439,9 @@ function Slider() {
           )}
         </div>
       </div>
+      <SelectedOption>
+        <img src="/images/00042_H.png" alt="selected option" />
+      </SelectedOption>
       <BtnToggle
         toggleZoomInOut={toggleZoomInOut}
         zoomedOut={zoomedOut}
