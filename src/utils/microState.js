@@ -1,3 +1,6 @@
+import { useEffect } from 'react';
+
+// Can be use separately without framework.
 const microState = () => {
   let store = window.global;
   const _cssCustomPropRoot = document.documentElement;
@@ -63,3 +66,23 @@ const microState = () => {
 };
 
 export default microState;
+
+// Used to sync react local state to microState.
+// add `useMicroStateSync({ zoomedOut });`
+// will sync zoomedOut to ZOOMED_OUT in microState.
+export function useMicroStateSync(varsObj) {
+  const camelToSnakeUpperCase = (str) =>
+    str.replace(/[A-Z]/g, (letter) => `_${letter}`).toUpperCase();
+  const arr = Object.keys(varsObj);
+
+  useEffect(() => {
+    const { SET } = microState();
+    const obj = {};
+    arr.forEach((reactVar) => {
+      obj[camelToSnakeUpperCase(reactVar)] = varsObj[reactVar];
+    });
+    SET(obj);
+    console.log('obj', obj);
+    // eslint-disable-next-line
+  }, [...arr, varsObj, arr]);
+}

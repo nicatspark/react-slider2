@@ -1,12 +1,9 @@
 import { useEffect, useState, useRef } from 'react';
 import BtnToggle from './BtnToggle.jsx';
 import usePreventScroll from './utils/usePreventScroll';
-// import Portal from './Portal';
-// import motionBlur from './utils/motion-blur-move';
-import microState from './utils/microState';
+import microState, { useMicroStateSync } from './utils/microState';
 import preloadImages from './utils/preloadImages';
 import easeTo from './utils/easeTo';
-// import _ from 'lodash';
 import clsx from 'clsx';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
@@ -222,9 +219,10 @@ const onInteractionFn = (pointerState) => {
       durationMs: snapDurationMS,
       targetDistance,
       fnToRun: (x) => moveTo({ target: SCROLL_POS + x }),
-    }).then((lastx) => {
-      console.log('done', Math.round(lastx), selectedIndex);
     });
+    // .then((lastx) => {
+    //   console.log('done', Math.round(lastx), selectedIndex);
+    // });
     // easeSliderTo({ distance: targetDistance, durationMs: snapDurationMS });
   }
 
@@ -244,16 +242,11 @@ const onInteractionFn = (pointerState) => {
     const clamped_xpos = clampNumber(target, 0, MAX_SCROLL_DISTANCE);
     distance = Math.round(-clamped_xpos - SCROLL_POS);
     SET({ SELECTED_CARD: index });
-    // SET({ SCROLL_POS: clamped_xpos });
     return easeTo({
       durationMs,
       targetDistance: distance,
       fnToRun: (x) => moveTo({ target: SCROLL_POS + x }),
     });
-    // .then((lastx) => {
-    //   debugger;
-    //   console.log('done', Math.round(lastx), index);
-    // });
   }
 
   function _argsAreValid({ distance, target, index }) {
@@ -350,6 +343,7 @@ function Slider() {
     domTarget,
     eventOptions: { passive: false },
   });
+  useMicroStateSync({ zoomedOut });
 
   useGesture(
     {
@@ -375,22 +369,13 @@ function Slider() {
   const handleClick = async (e) => {
     const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
     if (clickInsideZoomToggleBtn(e)) return;
-    console.log('zoomedOut', zoomedOut);
     setZoomedOut(false);
     const selectedCard = e.target.closest('.card-section');
     if (!selectedCard) return;
-    // const { index: nextIndex, posx } = selectedCard.dataset;
     const { easeSliderTo } = onInteractionFn();
     await easeSliderTo({ target: +selectedCard.dataset.posx });
     console.log('wait done');
-    // return slideCards({ nextIndex });
   };
-
-  useEffect(() => {
-    const { SET } = stateGuiMediator();
-    SET({ ZOOMED_OUT: zoomedOut });
-    console.log('zoomedOut', zoomedOut);
-  }, [zoomedOut]);
 
   useEffect(() => {
     const init = async () => {
@@ -407,17 +392,6 @@ function Slider() {
     };
     init();
   }, [setOptions, setScrollDisabled]);
-
-  // useEffect(() => {
-  //   window.addEventListener('click', clickActions);
-  //   const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
-  //   //
-  //   async function clickActions(e) {
-  //     if (clickInsideZoomToggleBtn(e)) return;
-  //     if (zoomedOut) setZoomedOut(false);
-  //     await handleClick(e);
-  //   }
-  // }, [zoomedOut]);
 
   const cardContainerStyles = clsx({
     'card-container': true,
