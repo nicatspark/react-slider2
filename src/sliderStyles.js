@@ -1,4 +1,5 @@
 import styled from 'styled-components';
+import LoadingIcon from './LoadingIcon';
 
 const SelectedOption = styled.div`
   position: absolute;
@@ -15,4 +16,11 @@ const SelectedOption = styled.div`
   }
 `;
 
-export { SelectedOption };
+const LoadingIconStyled = styled(LoadingIcon)`
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+`;
+
+export { SelectedOption, LoadingIconStyled };

@@ -7,7 +7,8 @@ import easeTo from './utils/easeTo';
 import clsx from 'clsx';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
-import { SelectedOption } from './sliderStyles.js';
+import { SelectedOption, LoadingIconStyled } from './sliderStyles.js';
+// import LoadingIcon from './LoadingIcon';
 
 /* TODO
 - Test the 'touchmove' event for iphone.
@@ -378,6 +379,7 @@ function Slider() {
   const cardContainer = useRef();
   const [zoomedOut, setZoomedOut] = useState(false);
   const [, setScrollDisabled] = usePreventScroll(true);
+  const [showLoadingIcon, setShowLoadingIcon] = useState(true);
   usePinch((state) => doOnPinch(state, setZoomedOut), {
     domTarget,
     eventOptions: { passive: false },
@@ -495,6 +497,9 @@ function Slider() {
       </div>
       <SelectedOption>
         <img src="/images/00042_H.png" alt="selected option" />
+        {showLoadingIcon && (
+          <LoadingIconStyled size="42" displayMode="no-portal" />
+        )}
       </SelectedOption>
       <BtnToggle
         toggleZoomInOut={toggleZoomInOut}
