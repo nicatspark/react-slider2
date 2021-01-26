@@ -82,7 +82,6 @@ export function useMicroStateSync(varsObj) {
       obj[camelToSnakeUpperCase(reactVar)] = varsObj[reactVar];
     });
     SET(obj);
-    console.log('obj', obj);
     // eslint-disable-next-line
   }, [...arr, varsObj, arr]);
 }

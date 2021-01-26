@@ -186,8 +186,8 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 
 const onInteractionFn = (pointerState) => {
   if (!pointerState) return { moveTo, easeSliderTo };
-  console.log(pointerState.event.type);
-  log(pointerState.event.type);
+  // console.log('Event type:', pointerState.event.type);
+  // log(pointerState.event.type);
   if (
     ['pointerdown', 'pointerup', 'pointermove'].includes(
       pointerState.event.type
@@ -207,10 +207,10 @@ const onInteractionFn = (pointerState) => {
   const snapDurationMS = 400;
   const { SET, STATE } = stateGuiMediator();
   const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
-  let sign = -1;
-  if ((axis === 'x' && delta[0] > 0) || (axis === 'y' && delta[0] > 0))
-    sign = 1;
-  log(sign + ' ' + delta[0] + ' ' + delta[1]);
+  // let sign = -1;
+  // if ((axis === 'x' && delta[0] > 0) || (axis === 'y' && delta[0] > 0))
+  //   sign = 1;
+  // log(sign + ' ' + delta[0] + ' ' + delta[1]);
   const x = axis === 'x' ? delta[0] : delta[1];
   const xpos = SCROLL_POS - x * 1.3;
   if (wheeling || dragging) moveTo({ target: xpos });
@@ -224,7 +224,7 @@ const onInteractionFn = (pointerState) => {
     const target_x = -nearestCardPos;
     const targetDistance = Math.round(target_x - SCROLL_POS);
     // TODO: use extracted function instead.
-    easeTo({
+    return easeTo({
       durationMs: snapDurationMS,
       targetDistance,
       fnToRun: (x) => {
@@ -259,22 +259,10 @@ const onInteractionFn = (pointerState) => {
     });
   }
 
-  function _argsAreValid({ distance, target, index }) {
-    const hasRelativOrAbsolutArgs = [distance, target].filter(
-      (a) => typeof a !== 'undefined'
-    ).length;
-    const noError = hasRelativOrAbsolutArgs === 1 || index;
-    console.assert(
-      noError,
-      'The moveTo() function can only take distance OR target, AND/OR index.'
-    );
-    return noError;
-  }
-
   function moveTo({ distance, target, index }) {
     const { SET, STATE, cardsWrapper, cardsCollection } = stateGuiMediator();
     const { MAX_SCROLL_DISTANCE, SCROLL_POS } = STATE;
-    console.log('target', target);
+    // console.log('target', target);
     if (!_argsAreValid(arguments[0])) return;
     if (distance && !index) target = SCROLL_POS + x;
     if (index && !distance && !target)
@@ -287,6 +275,18 @@ const onInteractionFn = (pointerState) => {
     SET({ SCROLL_POS: clamped_xpos });
     cardsWrapper.style.transform = `translateX(${clamped_xpos}px)`;
     handleTranlucensy(-clamped_xpos);
+  }
+
+  function _argsAreValid({ distance, target, index }) {
+    const hasRelativOrAbsolutArgs = [distance, target].filter(
+      (a) => typeof a !== 'undefined'
+    ).length;
+    const noError = hasRelativOrAbsolutArgs === 1 || index >= 0;
+    console.assert(
+      noError,
+      'The moveTo() function can only take distance OR target, AND/OR index.'
+    );
+    return noError;
   }
 
   function handleTranlucensy(clamped_xpos) {
@@ -347,6 +347,27 @@ const onInteractionFn = (pointerState) => {
   }
 };
 
+const swipe = async (state) => {
+  const {
+    delta: [x],
+  } = state;
+  const { SET, STATE } = stateGuiMediator();
+  // console.log('state', state);
+  if (STATE.CARDS_MOVING && state._lastEventType === 'pointerup') {
+    console.log('pointer up');
+    SET({ CARDS_MOVING: false });
+    return;
+  }
+  // if (state._lastEventType === 'pointerup' && x === 0) log('rejected touch');
+  if (STATE.CARDS_MOVING || x === 0) return;
+  SET({ CARDS_MOVING: true });
+  let nextIndex = STATE.SELECTED_INDEX + (x < 0 ? 1 : -1);
+  nextIndex = clampNumber(nextIndex, STATE.CARDS.length - 1, 0);
+  const { easeSliderTo } = onInteractionFn();
+  await easeSliderTo({ index: nextIndex });
+  // log('Done moving');
+};
+
 function Slider() {
   console.log('rendered');
   // const {SET} = stateGuiMediator();
@@ -365,19 +386,32 @@ function Slider() {
 
   useGesture(
     {
+      // onWheel: (state) => swipe(state),
       onWheel: (state) => onInteractionFn(state),
       onPointerDown: ({ event, ...sharedState }) => {
-        handleClick(event);
+        if (event.pointerType === 'mouse') handleClick(event);
+        else {
+          // if (event.pointerType === 'touch')
+          setTimeout(() => {
+            const { STATE } = stateGuiMediator();
+            if (!STATE.CARDS_MOVING) log('##### Touch tap');
+          }, 100);
+        }
       },
     },
     { domTarget, eventOptions: { passive: false } }
   );
   useDrag(
-    (state) =>
-      onInteractionFn({ ...state, delta: state.delta.map((x) => x * -3) }),
+    (state) => {
+      if (state._dragIsTap) return;
+      // console.log('Touch tap detected');
+      else swipe(state);
+    },
+    // ({ delta: [x] }) => log('wrong'),
+    // onInteractionFn({ ...state, delta: state.delta.map((x) => x * -3) }),
     {
       domTarget,
-      delay: true,
+      delay: false,
       eventOptions: { passive: false },
     }
   );
