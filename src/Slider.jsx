@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import BtnToggle from './BtnToggle.jsx';
 import usePreventScroll from './utils/usePreventScroll';
 import microState, { useMicroStateSync } from './utils/microState';
@@ -185,7 +185,7 @@ const doOnPinch = (state, setZoomedOut) => {
 document.addEventListener('gesturestart', (e) => e.preventDefault());
 document.addEventListener('gesturechange', (e) => e.preventDefault());
 
-const onInteractionFn = (pointerState) => {
+const onInteractionFn = (pointerState, reactScopeForwarding) => {
   if (!pointerState) return { moveTo, easeSliderTo };
   // console.log('Event type:', pointerState.event.type);
   // log(pointerState.event.type);
@@ -208,10 +208,7 @@ const onInteractionFn = (pointerState) => {
   const snapDurationMS = 400;
   const { SET, STATE } = stateGuiMediator();
   const { CARD_SCROLL_DISTANCE, CARDS, SCROLL_POS } = STATE;
-  // let sign = -1;
-  // if ((axis === 'x' && delta[0] > 0) || (axis === 'y' && delta[0] > 0))
-  //   sign = 1;
-  // log(sign + ' ' + delta[0] + ' ' + delta[1]);
+  reactScopeForwarding('setShowLoadingIcon', [true]);
   const x = axis === 'x' ? delta[0] : delta[1];
   const xpos = SCROLL_POS - x * 1.3;
   if (wheeling || dragging) moveTo({ target: xpos });
@@ -222,6 +219,7 @@ const onInteractionFn = (pointerState) => {
       snapValues_arr
     );
     SET({ SELECTED_INDEX: selectedIndex });
+    reactScopeForwarding('setSelectedIndex', [selectedIndex]);
     const target_x = -nearestCardPos;
     const targetDistance = Math.round(target_x - SCROLL_POS);
     // TODO: use extracted function instead.
@@ -232,6 +230,8 @@ const onInteractionFn = (pointerState) => {
         console.log('x', x);
         moveTo({ target: SCROLL_POS + x });
       },
+    }).then(() => {
+      reactScopeForwarding('setShowLoadingIcon', [false]);
     });
     // .then((lastx) => {
     //   console.log('done', Math.round(lastx), selectedIndex);
@@ -239,7 +239,10 @@ const onInteractionFn = (pointerState) => {
     // easeSliderTo({ distance: targetDistance, durationMs: snapDurationMS });
   }
 
-  async function easeSliderTo({ distance, target, index, durationMs = 400 }) {
+  async function easeSliderTo(
+    { distance, target, index, durationMs = 400 },
+    reactScopeForwarding
+  ) {
     if (!_argsAreValid(arguments[0])) return;
     const { SET, STATE, cardsCollection } = stateGuiMediator();
     const { SCROLL_POS, MAX_SCROLL_DISTANCE } = STATE;
@@ -253,6 +256,7 @@ const onInteractionFn = (pointerState) => {
     const clamped_xpos = clampNumber(target, 0, MAX_SCROLL_DISTANCE);
     distance = Math.round(-clamped_xpos - SCROLL_POS);
     SET({ SELECTED_INDEX: index });
+    reactScopeForwarding('setSelectedIndex', [index]);
     return easeTo({
       durationMs,
       targetDistance: distance,
@@ -348,38 +352,64 @@ const onInteractionFn = (pointerState) => {
   }
 };
 
-const swipe = async (state) => {
+const swipe = async (state, reactScopeForwarding) => {
   const {
     delta: [x],
   } = state;
   const { SET, STATE } = stateGuiMediator();
   // console.log('state', state);
   if (STATE.CARDS_MOVING && state._lastEventType === 'pointerup') {
-    console.log('pointer up');
-    SET({ CARDS_MOVING: false });
+    cancelLock();
     return;
   }
   // if (state._lastEventType === 'pointerup' && x === 0) log('rejected touch');
   if (STATE.CARDS_MOVING || x === 0) return;
   SET({ CARDS_MOVING: true });
+  reactScopeForwarding('setShowLoadingIcon', [true]);
   let nextIndex = STATE.SELECTED_INDEX + (x < 0 ? 1 : -1);
   nextIndex = clampNumber(nextIndex, STATE.CARDS.length - 1, 0);
   const { easeSliderTo } = onInteractionFn();
   await easeSliderTo({ index: nextIndex });
   // log('Done moving');
+  setTimeout(cancelLock, 1000);
+
+  function cancelLock() {
+    console.log('pointer up');
+    SET({ CARDS_MOVING: false });
+    reactScopeForwarding('setShowLoadingIcon', [false]);
+  }
 };
 
 function Slider() {
   console.log('rendered');
   // const {SET} = stateGuiMediator();
   const domTarget = useRef(null);
-  const [options, setOptions] = useState([]);
+  const selectedImage = useRef('');
+  const [cardOptions, setCardOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
   const [hideSlider, setHideSlider] = useState(false);
   const cardContainer = useRef();
   const [zoomedOut, setZoomedOut] = useState(false);
   const [, setScrollDisabled] = usePreventScroll(true);
-  const [showLoadingIcon, setShowLoadingIcon] = useState(true);
+  const [showLoadingIcon, setShowLoadingIcon] = useState(false);
+  const [selectedIndex, setSelectedIndex] = useState(0);
+
+  // Forward scoped functions from react pure JS.
+  const forwardedFunctions = useMemo(
+    () => ({
+      setShowLoadingIcon,
+      setSelectedIndex,
+    }),
+    [setShowLoadingIcon, setSelectedIndex]
+  );
+  const reactScopeForwarding = useCallback(
+    (fn_str, args_arr) => {
+      forwardedFunctions[fn_str].apply(null, args_arr);
+    },
+    [forwardedFunctions]
+  );
+  // End: Forward scoped functions from react.
+
   usePinch((state) => doOnPinch(state, setZoomedOut), {
     domTarget,
     eventOptions: { passive: false },
@@ -389,7 +419,7 @@ function Slider() {
   useGesture(
     {
       // onWheel: (state) => swipe(state),
-      onWheel: (state) => onInteractionFn(state),
+      onWheel: (state) => onInteractionFn(state, reactScopeForwarding),
       onPointerDown: ({ event, ...sharedState }) => {
         if (event.pointerType === 'mouse') handleClick(event);
         else {
@@ -407,7 +437,7 @@ function Slider() {
     (state) => {
       if (state._dragIsTap) return;
       // console.log('Touch tap detected');
-      else swipe(state);
+      else swipe(state, reactScopeForwarding);
     },
     // ({ delta: [x] }) => log('wrong'),
     // onInteractionFn({ ...state, delta: state.delta.map((x) => x * -3) }),
@@ -436,19 +466,28 @@ function Slider() {
       const cardsArr = await fetchApi();
       setCardsToMicroState(cardsArr);
       await preloadImages(cardsArr);
+      setSelectedIndex(cardsArr.findIndex((c) => c.selectedIndex));
       setPreloading(false);
       setHideSlider(true);
-      setOptions(cardsArr);
+      setCardOptions(cardsArr);
       await initiate();
       setHideSlider(false);
-      onInteractionFn().easeSliderTo({
-        index: stateGuiMediator().STATE.SELECTED_INDEX,
-      });
+      onInteractionFn().easeSliderTo(
+        {
+          index: stateGuiMediator().STATE.SELECTED_INDEX,
+        },
+        reactScopeForwarding
+      );
       if (true) setScrollDisabled(true);
       console.log('React inited');
     };
     init();
-  }, [setOptions, setScrollDisabled]);
+  }, [setCardOptions, setScrollDisabled, reactScopeForwarding]);
+
+  useEffect(() => {
+    if (!cardOptions?.length) return;
+    selectedImage.current.src = cardOptions[selectedIndex]?.imageUrl || '';
+  }, [selectedIndex, cardOptions]);
 
   const cardContainerStyles = clsx({
     'card-container': true,
@@ -461,7 +500,7 @@ function Slider() {
       <div ref={cardContainer} className={cardContainerStyles}>
         <div className={`card-wrapper${hideSlider ? ' transparent' : ''}`}>
           {!preloading ? (
-            options.map((o, i) => (
+            cardOptions.map((o, i) => (
               <div key={i} className="card-section center" data-index={i}>
                 <div className="image">
                   <img src={o.imageUrl} alt={o.header} />
@@ -496,7 +535,7 @@ function Slider() {
         </div>
       </div>
       <SelectedOption>
-        <img src="/images/00042_H.png" alt="selected option" />
+        <img ref={selectedImage} src="" alt="selected option" />
         {showLoadingIcon && (
           <LoadingIconStyled size="42" displayMode="no-portal" />
         )}
