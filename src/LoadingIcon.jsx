@@ -20,6 +20,7 @@ const Wrapper = styled.div`
     transition: all 1s;
     font-family: 'Scania Sans bold', Helvetica, sans-serif;
     font-size: 0.8em;
+    color: white;
     opacity: 1;
     &.fade-in {
       opacity: 0;
@@ -29,7 +30,7 @@ const Wrapper = styled.div`
 
 const LoadingIcon = ({ size = 24, displayMode, ...rest } = {}) => {
   const [showText, setShowText] = useState(false);
-  const t = () => 'Loading'; // useText();
+  const t = () => 'Still loading'; // useText();
 
   useEffect(() => {
     const id = setTimeout(() => {
@@ -55,6 +56,7 @@ const LoadingIcon = ({ size = 24, displayMode, ...rest } = {}) => {
           <UseAnimations
             animation={loading}
             size={size}
+            strokeColor="rgb(255,255,255)"
             style={{
               color: 'white',
               position: 'absolute',

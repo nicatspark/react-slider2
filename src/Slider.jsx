@@ -25,7 +25,8 @@ Nice to have:
 /* Helper functions */
 const log = (x) => {
   const el = document.querySelector('.log');
-  el.innerHTML = JSON.stringify(x) + '<br>' + el.innerHTML;
+  el.innerHTML = !x ? '' : JSON.stringify(x) + '<br>' + el.innerHTML;
+  setTimeout(() => (el.innerHTML = ''), 2000);
 };
 const touchSupported = () =>
   'ontouchstart' in window ||
@@ -159,10 +160,7 @@ const fetchApi = () => {
         defaultSelected: false,
       },
     ];
-    setTimeout(() => {
-      // SET({ CARDS: cardsArr });
-      resolve(cardsArr);
-    }, 2000);
+    setTimeout(() => resolve(cardsArr), 2000);
   });
 };
 
@@ -189,8 +187,6 @@ document.addEventListener('gesturechange', (e) => e.preventDefault());
 
 const onInteractionFn = (pointerState, reactScopeForwarding) => {
   if (!pointerState) return { moveTo, easeSliderTo };
-  // console.log('Event type:', pointerState.event.type);
-  // log(pointerState.event.type);
   if (
     ['pointerdown', 'pointerup', 'pointermove'].includes(
       pointerState.event.type
@@ -229,7 +225,6 @@ const onInteractionFn = (pointerState, reactScopeForwarding) => {
       durationMs: snapDurationMS,
       targetDistance,
       fnToRun: (x) => {
-        console.log('x', x);
         moveTo({ target: SCROLL_POS + x });
       },
     }).then(() => {
@@ -269,7 +264,6 @@ const onInteractionFn = (pointerState, reactScopeForwarding) => {
   function moveTo({ distance, target, index }) {
     const { SET, STATE, cardsWrapper, cardsCollection } = stateGuiMediator();
     const { MAX_SCROLL_DISTANCE, SCROLL_POS } = STATE;
-    // console.log('target', target);
     if (!_argsAreValid(arguments[0])) return;
     if (distance && !index) target = SCROLL_POS + x;
     if (index && !distance && !target)
@@ -376,7 +370,7 @@ const swipe = async (state, reactScopeForwarding) => {
   setTimeout(cancelLock, 1000);
 
   function cancelLock() {
-    console.log('pointer up');
+    log('pointer up');
     SET({ CARDS_MOVING: false });
     reactScopeForwarding('setShowLoadingIcon', [false]);
   }
@@ -384,10 +378,7 @@ const swipe = async (state, reactScopeForwarding) => {
 
 function Slider() {
   console.log('rendered');
-  // const {SET} = stateGuiMediator();
   const domTarget = useRef(null);
-  const selectedImage = useRef('');
-  // const clickMarkerRef = useRef('');
   const [cardOptions, setCardOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
   const [hideSlider, setHideSlider] = useState(false);
@@ -396,6 +387,7 @@ function Slider() {
   const [, setScrollDisabled] = usePreventScroll(true);
   const [showLoadingIcon, setShowLoadingIcon] = useState(false);
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [selectedImageSrc, setSelectedImageSrc] = useState('');
 
   // Forward scoped functions from react pure JS.
   const forwardedFunctions = useMemo(
@@ -429,7 +421,7 @@ function Slider() {
           // if (event.pointerType === 'touch')
           setTimeout(() => {
             const { STATE } = stateGuiMediator();
-            if (!STATE.CARDS_MOVING) log('##### Touch tap');
+            if (!STATE.CARDS_MOVING) handleClick(event); //log('##### Touch tap');
           }, 100);
         }
       },
@@ -485,7 +477,8 @@ function Slider() {
         },
         reactScopeForwarding
       );
-      if (true) setScrollDisabled(true);
+      // Doesn't seem to make a difference. Remove later.
+      if (false) setScrollDisabled(true);
       console.log('React inited');
     };
     init();
@@ -493,7 +486,8 @@ function Slider() {
 
   useEffect(() => {
     if (!cardOptions?.length) return;
-    selectedImage.current.src = cardOptions[selectedIndex]?.imageUrl || '';
+    // selectedImage.current.src = cardOptions[selectedIndex]?.imageUrl || '';
+    setSelectedImageSrc(cardOptions[selectedIndex]?.imageUrl || '');
   }, [selectedIndex, cardOptions]);
 
   const cardContainerStyles = clsx({
@@ -523,27 +517,16 @@ function Slider() {
             ))
           ) : (
             <>
-              <div className="card-section center preloader-card">
-                <div className="image animated-background"></div>
-                <div className="header animated-background">
-                  <h4>&nbsp;</h4>
-                </div>
-                <div className="paragraph animated-background">&nbsp;</div>
-              </div>
-              <div className="card-section center preloader-card">
-                <div className="image animated-background"></div>
-                <div className="header animated-background">
-                  <h4>&nbsp;</h4>
-                </div>
-                <div className="paragraph animated-background">&nbsp;</div>
-              </div>
+              {preloaderCard()}
+              {preloaderCard()}
+              {preloaderCard()}
             </>
           )}
         </div>
       </div>
       <SelectedOption>
-        {!!cardOptions.length && (
-          <img ref={selectedImage} src="" alt="selected option" />
+        {!!selectedImageSrc.length && (
+          <img src={selectedImageSrc} alt="selected option" />
         )}
         {showLoadingIcon && (
           <LoadingIconStyled size="42" displayMode="no-portal" />
@@ -554,6 +537,18 @@ function Slider() {
         zoomedOut={zoomedOut}
       ></BtnToggle>
       <Portal></Portal>
+    </div>
+  );
+}
+
+function preloaderCard() {
+  return (
+    <div className="card-section center preloader-card">
+      <div className="image animated-background"></div>
+      <div className="header animated-background">
+        <h4>&nbsp;</h4>
+      </div>
+      <div className="paragraph animated-background">&nbsp;</div>
     </div>
   );
 }
