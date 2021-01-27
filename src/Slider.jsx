@@ -6,7 +6,7 @@ import preloadImages from './utils/preloadImages';
 import Portal from './Portal';
 import easeTo from './utils/easeTo';
 import clsx from 'clsx';
-import ClickMarker from './ClickMarker';
+import clickHighlight from './utils/clickHighlight';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
 import { SelectedOption, LoadingIconStyled } from './sliderStyles.js';
@@ -468,19 +468,6 @@ function Slider() {
     console.log('wait done');
   };
 
-  const clickHighlight = (e) => {
-    return new Promise((resolve) => {
-      const clickMarkerRef = document.querySelector('.click-marker');
-      clickMarkerRef.style.top = e.clientY + 'px';
-      clickMarkerRef.style.left = e.clientX + 'px';
-      clickMarkerRef.classList.add('active');
-      setTimeout(() => {
-        clickMarkerRef.classList.remove('active');
-        setTimeout(resolve, 200);
-      });
-    });
-  };
-
   useEffect(() => {
     const init = async () => {
       const cardsArr = await fetchApi();
@@ -555,7 +542,9 @@ function Slider() {
         </div>
       </div>
       <SelectedOption>
-        <img ref={selectedImage} src="" alt="selected option" />
+        {!!cardOptions.length && (
+          <img ref={selectedImage} src="" alt="selected option" />
+        )}
         {showLoadingIcon && (
           <LoadingIconStyled size="42" displayMode="no-portal" />
         )}
@@ -564,9 +553,7 @@ function Slider() {
         toggleZoomInOut={toggleZoomInOut}
         zoomedOut={zoomedOut}
       ></BtnToggle>
-      <Portal>
-        <ClickMarker className="click-marker" />
-      </Portal>
+      <Portal></Portal>
     </div>
   );
 }
