@@ -3,8 +3,10 @@ import BtnToggle from './BtnToggle.jsx';
 import usePreventScroll from './utils/usePreventScroll';
 import microState, { useMicroStateSync } from './utils/microState';
 import preloadImages from './utils/preloadImages';
+import Portal from './Portal';
 import easeTo from './utils/easeTo';
 import clsx from 'clsx';
+import ClickMarker from './ClickMarker';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
 import { SelectedOption, LoadingIconStyled } from './sliderStyles.js';
@@ -369,7 +371,7 @@ const swipe = async (state, reactScopeForwarding) => {
   let nextIndex = STATE.SELECTED_INDEX + (x < 0 ? 1 : -1);
   nextIndex = clampNumber(nextIndex, STATE.CARDS.length - 1, 0);
   const { easeSliderTo } = onInteractionFn();
-  await easeSliderTo({ index: nextIndex });
+  await easeSliderTo({ index: nextIndex }, reactScopeForwarding);
   // log('Done moving');
   setTimeout(cancelLock, 1000);
 
@@ -385,6 +387,7 @@ function Slider() {
   // const {SET} = stateGuiMediator();
   const domTarget = useRef(null);
   const selectedImage = useRef('');
+  // const clickMarkerRef = useRef('');
   const [cardOptions, setCardOptions] = useState([]);
   const [preloading, setPreloading] = useState(true);
   const [hideSlider, setHideSlider] = useState(false);
@@ -454,11 +457,28 @@ function Slider() {
     const clickInsideZoomToggleBtn = (e) => !!e.target.closest('.zoom-toggle');
     if (clickInsideZoomToggleBtn(e)) return;
     setZoomedOut(false);
+    await clickHighlight(e);
     const selectedCard = e.target.closest('.card-section');
     if (!selectedCard) return;
     const { easeSliderTo } = onInteractionFn();
-    await easeSliderTo({ target: +selectedCard.dataset.posx });
+    await easeSliderTo(
+      { target: +selectedCard.dataset.posx },
+      reactScopeForwarding
+    );
     console.log('wait done');
+  };
+
+  const clickHighlight = (e) => {
+    return new Promise((resolve) => {
+      const clickMarkerRef = document.querySelector('.click-marker');
+      clickMarkerRef.style.top = e.clientY + 'px';
+      clickMarkerRef.style.left = e.clientX + 'px';
+      clickMarkerRef.classList.add('active');
+      setTimeout(() => {
+        clickMarkerRef.classList.remove('active');
+        setTimeout(resolve, 200);
+      });
+    });
   };
 
   useEffect(() => {
@@ -544,6 +564,9 @@ function Slider() {
         toggleZoomInOut={toggleZoomInOut}
         zoomedOut={zoomedOut}
       ></BtnToggle>
+      <Portal>
+        <ClickMarker className="click-marker" />
+      </Portal>
     </div>
   );
 }
