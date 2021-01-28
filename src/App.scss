@@ -18,8 +18,8 @@
   grid-template-rows: var(--header-height) 1fr;
   height: 100%;
   header {
-    background-color: black;
-    color: #666;
+    background-color: #111111;
+    color: #222;
     padding: 30px;
     display: grid;
     place-items: center;
@@ -67,7 +67,7 @@ div.card-wrapper {
 }
 
 div.card-section {
-  color: #fff;
+  color: #313131;
   width: var(--card-width);
   height: inherit;
   display: grid;
@@ -147,5 +147,46 @@ div.card-section {
     border-width: 50px;
     opacity: 0.5;
     transition: none;
+  }
+}
+
+.backdrop {
+  background: radial-gradient(
+      200px circle at 50% -10%,
+      #e4e6ec 0%,
+      rgba(228, 230, 236, 0) 100%
+    ),
+    linear-gradient(
+      to bottom,
+      #a1a6b2 0%,
+      hsla(201, 5%, 56%, 1) 35%,
+      hsla(200, 5%, 57%, 1) 68%,
+      #d0d3db 91%,
+      #d0d3db 100%
+    );
+  @media screen and (min-width: 576px) {
+    background: radial-gradient(
+        600px circle at 50% -20%,
+        hsla(225, 17%, 91%, 1) 0%,
+        hsla(225, 17%, 91%, 0) 100%
+      ),
+      radial-gradient(
+        600px circle at 50% 110%,
+        hsla(225, 17%, 91%, 1) 0%,
+        hsla(225, 17%, 91%, 0) 100%
+      ),
+      radial-gradient(
+        600px circle at 0% 40%,
+        hsla(225, 10%, 61%, 1) -10%,
+        hsla(225, 10%, 61%, 0) 100%
+      ),
+      linear-gradient(
+        to bottom,
+        #a1a6b2 0%,
+        #9da5b0 35%,
+        #8892a0 68%,
+        #d0d3db 91%,
+        #d0d3db 100%
+      );
   }
 }

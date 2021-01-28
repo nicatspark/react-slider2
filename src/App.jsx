@@ -5,7 +5,7 @@ import styled from 'styled-components';
 
 const Log = styled.div`
   position: fixed;
-  background: white;
+  color: #666;
   width: 100vw;
   height: 100px;
   overflow-x: auto;
@@ -13,7 +13,6 @@ const Log = styled.div`
   top: 0;
   left: 0;
   font-size: 0.7rem;
-  mix-blend-mode: exclusion;
 `;
 
 function App() {
@@ -23,7 +22,7 @@ function App() {
         <header>
           <h1>Configurator</h1>
         </header>
-        <div className="content-frame">
+        <div className="content-frame backdrop">
           <Slider />
         </div>
       </div>
