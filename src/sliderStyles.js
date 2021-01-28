@@ -5,7 +5,7 @@ const SelectedOption = styled.div`
   position: absolute;
   top: calc(var(--header-height) + var(--slider-vertical-padding));
   width: 100vw;
-  border: 1px solid red;
+  border: var(--debug-boxes);
   height: var(--selected-img-height);
   display: flex;
   align-items: flex-end;

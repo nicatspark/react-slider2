@@ -6,6 +6,7 @@
   --card-img-spacing: 100px; // Source for distribution.
   --selected-img-height: 55vh;
   --slider-vertical-padding: 15px;
+  --debug-boxes: 1px dashed rgba(255, 255, 255, 0);
 }
 
 .App {
@@ -34,8 +35,8 @@
 }
 
 .card-container {
-  box-shadow: 0 -4px 0 rgba(255, 255, 255, 0.5),
-    0 4px 0 rgba(255, 255, 255, 0.5);
+  // box-shadow: 0 -4px 0 rgba(255, 255, 255, 0.5),
+  //   0 4px 0 rgba(255, 255, 255, 0.5);
   //
   display: grid;
   /* center wrapper old school way */
@@ -74,7 +75,7 @@ div.card-section {
   gap: 0.5rem;
   place-items: center;
   &:not(.preloader-card) > div {
-    border: 1px dashed rgba(255, 255, 255, 0.3);
+    border: var(--debug-boxes);
     height: 100%;
     justify-self: stretch;
     &:first-child {
