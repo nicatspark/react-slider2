@@ -1,5 +1,16 @@
+/*
+This function creates a quick soft expanding ring where the user clicks.
+clickHighlight(clickevent) returns a promise and when 
+it is run it creates and places the higlighting div in the click centre. 
+Next it removes the 'active' class and lets the animation run
+before it hides itself until next times it is activated.
+The clickDelay constant is the time before the promise resolves. This time
+is shorter than the animation for a snappier experience.
+
+It is run outside of any framework and thus not affected by renders.
+*/
 const clickDelay = 100;
-const WrapperClass = 'click-marker';
+const WrapperClass = 'click-marker'; // Match with CSS.
 
 const createHtml = () => {
   const div = document.createElement('div');

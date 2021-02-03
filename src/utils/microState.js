@@ -67,6 +67,7 @@ const microState = () => {
 
 export default microState;
 
+// useMicroStateSync()
 // Used to sync react local state to microState.
 // add `useMicroStateSync({ zoomedOut });`
 // will sync zoomedOut to ZOOMED_OUT in microState.

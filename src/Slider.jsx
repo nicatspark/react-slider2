@@ -10,7 +10,12 @@ import clickHighlight from './utils/clickHighlight';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
 import { SelectedOption, LoadingIconStyled } from './sliderStyles.js';
-// import LoadingIcon from './LoadingIcon';
+import {
+  CardContainer,
+  CardSection,
+  CardWrapper,
+  PreloaderCard,
+} from './styles';
 
 /* TODO
 - Test the 'touchmove' event for iphone.
@@ -498,11 +503,17 @@ function Slider() {
 
   return (
     <div ref={domTarget} style={{ width: '100%', height: '100%' }}>
-      <div ref={cardContainer} className={cardContainerStyles}>
-        <div className={`card-wrapper${hideSlider ? ' transparent' : ''}`}>
+      <CardContainer ref={cardContainer} className={cardContainerStyles}>
+        <CardWrapper
+          className={`card-wrapper${hideSlider ? ' transparent' : ''}`}
+        >
           {!preloading ? (
             cardOptions.map((o, i) => (
-              <div key={i} className="card-section center" data-index={i}>
+              <CardSection
+                key={i}
+                className="card-section center"
+                data-index={i}
+              >
                 <div className="image">
                   <img src={o.imageUrl} alt={o.header} />
                 </div>
@@ -513,7 +524,7 @@ function Slider() {
                   Lorem ipsum dolor sit amet consectetur adipisicing elit.
                   Accusantium quidem nostrum veritatis odio, maiores quasi?
                 </div>
-              </div>
+              </CardSection>
             ))
           ) : (
             <>
@@ -522,8 +533,8 @@ function Slider() {
               {preloaderCard()}
             </>
           )}
-        </div>
-      </div>
+        </CardWrapper>
+      </CardContainer>
       <SelectedOption>
         {!!selectedImageSrc.length && (
           <img src={selectedImageSrc} alt="selected option" />
@@ -543,13 +554,13 @@ function Slider() {
 
 function preloaderCard() {
   return (
-    <div className="card-section center preloader-card">
+    <PreloaderCard className="card-section center preloader-card">
       <div className="image animated-background"></div>
       <div className="header animated-background">
         <h4>&nbsp;</h4>
       </div>
       <div className="paragraph animated-background">&nbsp;</div>
-    </div>
+    </PreloaderCard>
   );
 }
 

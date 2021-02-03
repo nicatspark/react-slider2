@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import UseAnimations from 'react-useanimations';
 import loading from 'react-useanimations/lib/loading';
 import Portal from './Portal';
-import styled from 'styled-components';
+import styled from 'styled-components/macro';
 // import useText from './useTexts';
 
 const Wrapper = styled.div`
