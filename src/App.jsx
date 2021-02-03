@@ -1,7 +1,7 @@
 import React from 'react';
-import Slider from './Slider';
+import Slider from './components/SldrCmpnt/Slider';
 import GlobalStyle from './GlobalStyles';
-import { PancakeGrid, Log } from './styles';
+import { PancakeGrid, Log } from './components/SldrCmpnt/styles';
 
 function App() {
   return (

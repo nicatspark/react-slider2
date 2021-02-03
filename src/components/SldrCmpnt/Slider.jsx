@@ -1,20 +1,21 @@
 import { useEffect, useState, useRef, useCallback, useMemo } from 'react';
 import BtnToggle from './BtnToggle.jsx';
-import usePreventScroll from './utils/usePreventScroll';
-import microState, { useMicroStateSync } from './utils/microState';
-import preloadImages from './utils/preloadImages';
-import Portal from './Portal';
-import easeTo from './utils/easeTo';
+import usePreventScroll from '../../utils/usePreventScroll';
+import microState, { useMicroStateSync } from '../../utils/microState';
+import preloadImages from '../../utils/preloadImages';
+import Portal from '../Portal';
+import easeTo from '../../utils/easeTo';
 import clsx from 'clsx';
-import clickHighlight from './utils/clickHighlight';
+import clickHighlight from '../../utils/clickHighlight';
 import { usePinch, useGesture, useDrag } from 'react-use-gesture';
 // import { useSpring, animated } from 'react-spring';
-import { SelectedOption, LoadingIconStyled } from './sliderStyles.js';
 import {
   CardContainer,
   CardSection,
   CardWrapper,
   PreloaderCard,
+  SelectedOption,
+  LoadingIconStyled,
 } from './styles';
 
 /* TODO
